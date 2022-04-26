@@ -12,6 +12,7 @@ import tensorflow as tf
 from src.py.base.losses import get_loss_func_torch
 from src.py.evaluation.evaluation import valid, test, entity_alignment_evaluation
 from src.py.load import read
+from src.py.util.env_checker import module_exists
 from src.py.util.util import task_divide, to_tensor
 
 
@@ -19,7 +20,11 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
     params = training_data_path.strip('/').split('/')
     print(out_folder, training_data_path, params, div_path, method_name)
     path = params[-1]
-    folder = out_folder + method_name + '/' + path + "/" + div_path + "/"
+    if module_exists():
+        envs = "torch"
+    else:
+        envs = "tf"
+    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs
     print("results output folder:", folder)
     return folder
 
