@@ -14,7 +14,7 @@ import warnings
 
 from src.py.base.initializers import init_embeddings
 from src.py.base.losses import get_loss_func_tf
-from src.py.util.util import load_session, task_divide
+from src.py.util.util import load_session, task_divide, early_stop
 
 
 def formatting_attr_triples(kgs, literal_len):

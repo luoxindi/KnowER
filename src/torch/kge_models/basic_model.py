@@ -1,287 +1,217 @@
 import math
+import multiprocessing as mp
+import random
+import sys
 import time
+import gc
+import numpy as np
 import os
 
-
-from joblib._multiprocessing_helpers import mp
-from torch.autograd import Variable
-import torch
-import numpy as np
-import torch.nn as nn
-from torch import optim
-from torch.utils.data import Dataset, DataLoader
-from tqdm import tqdm
-from src.py.base.losses import get_loss_func_torch
-from src.py.base.optimizers import get_optimizer_torch
-from src.py.evaluation.evaluation import LinkPredictionEvaluator
-from src.py.load import batch
-from src.py.util.util import task_divide, early_stop, to_var, to_tensor
 import ray
-# import ray.train as train
-from ray import train
-import ray.train.torch
-from ray.train.trainer import Trainer
-from typing import Dict
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+# from src.trainer.util import generate_out_folder
+from src.py.base.losses import get_loss_func_torch
+from src.py.evaluation.evaluation import valid, test, entity_alignment_evaluation
+from src.py.load import read
+from src.py.util.util import task_divide, to_tensor
 
-from src.torch.kge_models.basic_model import parallel_model
+
+def generate_out_folder(out_folder, training_data_path, div_path, method_name):
+    params = training_data_path.strip('/').split('/')
+    print(out_folder, training_data_path, params, div_path, method_name)
+    path = params[-1]
+    folder = out_folder + method_name + '/' + path + "/" + div_path + "/"
+    print("results output folder:", folder)
+    return folder
 
 
-class kge_trainer:
-    def __init__(self):
-        self.device = None
-        self.valid = None
+class BasicModel(nn.Module):
+    def init(self):
+        # need to be overwrite
+        pass
+
+    def __init__(self, args, kgs):
+        super(BasicModel, self).__init__()
+        self.transfer_matrix = None
+        self.rel_im_embeddings = None
+        self.rel_re_embeddings = None
+        self.ent_im_embeddings = None
+        self.ent_re_embeddings = None
+        self.norm_vector = None
+        self.rel_transfer = None
+        self.ent_transfer = None
+        self.ent_embeddings = None
+        self.rel_embeddings = None
         self.batch_size = None
-        self.neg_catch = None
-        self.loss = None
-        self.data_loader = None
-        self.optimizer = None
-        self.model = None
-        self.kgs = None
-        self.args = None
-        self.flag1 = -1
-        self.flag2 = -1
-        self.early_stop = None
-
-    def init(self, args, kgs, model):
+        self.low_values = True
         self.args = args
         self.kgs = kgs
-        self.model = model
+        self.out_folder = generate_out_folder(self.args.output, self.args.training_data, self.args.dataset_division,
+                                              self.__class__.__name__)
         if self.args.is_gpu:
-            torch.cuda.set_device(3)
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            # self.device = torch.device('cuda:2')
         else:
             self.device = torch.device('cpu')
-        self.model.to(self.device)
-        # print(self.model.parameters())
-        self.valid = LinkPredictionEvaluator(model, args, kgs, is_valid=True)
-        self.optimizer = get_optimizer_torch(self.args.optimizer, self.model, self.args.learning_rate)
+        self.ent_tot = self.kgs.entities_num
+        self.rel_tot = self.kgs.relations_num
+        self.seed_entities1 = None
+        self.seed_entities2 = None
+        self.neg_ts = None
+        self.neg_rs = None
+        self.neg_hs = None
+        self.pos_ts = None
+        self.pos_rs = None
+        self.pos_hs = None
+        self.mapping_mat = None
+        self.eye_mat = None
 
-    def run(self):
-        triples_num = self.kgs.relation_triples_num
-        triple_steps = int(math.ceil(triples_num / self.args.batch_size))
-        steps_tasks = task_divide(list(range(triple_steps)), self.args.batch_threads_num)
-        manager = mp.Manager()
-        training_batch_queue = manager.Queue()
-        neighbors1, neighbors2 = None, None
-        start = time.time()
-        print(next(self.model.parameters()).device)
-        for i in range(self.args.max_epoch):
-            res = 0
-            tm = time.time()
-            for steps_task in steps_tasks:
-                mp.Process(target=batch.generate_relation_triple_batch_queue,
-                           args=(self.kgs.relation_triples_list, [],
-                                 self.kgs.relation_triples_set, set(),
-                                 self.kgs.entities_list, [],
-                                 self.args.batch_size, steps_task,
-                                 training_batch_queue, neighbors1, neighbors2, self.args.neg_triple_num)).start()
-            print('processing cost time: {:.4f}s'.format(time.time() - tm))
+        self.triple_optimizer = None
+        self.triple_loss = None
+        self.mapping_optimizer = None
+        self.mapping_loss = None
 
-            start = time.time()
-            length = 0
-            for j in range(triple_steps):
-                self.optimizer.zero_grad()
-                batch_pos, batch_neg = training_batch_queue.get()
-                length += len(batch_pos)
-                # batch_pos = np.array(batch_pos)
-                # batch_neg = np.array(batch_neg)
-                datas = np.concatenate((batch_pos, batch_neg), axis=0)
+        self.mapping_matrix = None
+        self.ent_npy = None
+        self.rel_npy = None
+        self.attr_npy = None
+        self.map_npy = None
+        self.flag1 = -1
+        self.flag2 = -1
+        self.early_stop = False
 
-                data = {
-                    'batch_h': to_var(np.array([x[0] for x in datas]), self.device),
-                    'batch_r': to_var(np.array([x[1] for x in datas]), self.device),
-                    'batch_t': to_var(np.array([x[2] for x in datas]), self.device),
-                }
-                ts = time.time()
-                score = self.model(data)
-                print("data length is {}".format(len(batch_pos)))
-                print(time.time() - ts)
-                self.batch_size = len(batch_pos)
-                po_score = self.get_pos_score(score)
-                ne_score = self.get_neg_score(score)
-                loss = get_loss_func_torch(po_score, ne_score, self.args)
-                loss.backward()
-                self.optimizer.step()
-                res += loss.item()
-            print('epoch {}, avg. triple loss: {:.4f}, cost time: {:.4f}s'.format(i, res / length, time.time() - start))
-            if i >= self.args.start_valid and i % self.args.eval_freq == 0:
-                t1 = time.time()
-                flag = self.valid.print_results()
-                print('valid cost time: {:.4f}s'.format(time.time() - start))
-                '''self.flag1, self.flag2, self.early_stop = early_stop(self.flag1, self.flag2, flag)
-                if self.early_stop or i == self.args.max_epoch:
-                    break'''
-        self.save()
+    def _define_variables(self):
+        self.ent_embeddings = nn.Embedding(self.kgs.entities_num, self.args.dim)
+        self.rel_embeddings = nn.Embedding(self.kgs.relations_num, self.args.dim)
+        nn.init.xavier_uniform_(self.ent_embeds.weight.data)
+        nn.init.xavier_uniform_(self.rel_embeds.weight.data)
 
-    """
-    def run(self):
-        triples_num = self.kgs.relation_triples_num
-        triple_steps = int(math.ceil(triples_num / self.args.batch_size))
-        steps_tasks = task_divide(list(range(triple_steps)), self.args.batch_threads_num)
-        manager = mp.Manager()
-        training_batch_queue = manager.Queue()
-        neighbors1, neighbors2 = None, None
-        start = time.time()
-        print(next(self.model.parameters()).device)
-        train_dataset = general_dataloader(self.args, self.kgs)
-        data_loader = DataLoader(train_dataset, batch_size=self.args.batch_size)
-        for i in range(self.args.max_epoch):
-            res = 0
-            length = 0
-            for data in data_loader:
-                self.optimizer.zero_grad()
-                self.batch_size = data[0].shape[0]
-                length += self.batch_size
-                # batch_pos = np.array(batch_pos)
-                # batch_neg = np.array(batch_neg)
-                # data[3] = to_tensor(data[3], device)
-                data = {
-                    'batch_h': torch.cat((data[0].squeeze(), data[3].squeeze()), 0).int(),
-                    'batch_r': torch.cat((data[1].squeeze(), data[4].squeeze()), 0).int(),
-                    'batch_t': torch.cat((data[2].squeeze(), data[5].squeeze()), 0).int()
-                }
-                score = self.model(data)
-                # self.batch_size = len(batch_pos)
-                po_score = self.get_pos_score(score)
-                ne_score = self.get_neg_score(score)
-                loss = get_loss_func_torch(po_score, ne_score, self.args)
-                loss.backward()
-                self.optimizer.step()
-                res += loss.item()
-            print('epoch {}, avg. triple loss: {:.4f}, cost time: {:.4f}s'.format(i, res / length, time.time() - start))
-            if i >= self.args.start_valid and i % self.args.eval_freq == 0:
-                t1 = time.time()
-                flag = self.valid.print_results()
-                print('valid cost time: {:.4f}s'.format(time.time() - start))
-                '''self.flag1, self.flag2, self.early_stop = early_stop(self.flag1, self.flag2, flag)
-                if self.early_stop or i == self.args.max_epoch:
-                    break'''
-        self.save()
-        """
-    def test(self):
-        predict = LinkPredictionEvaluator(self.model, self.args, self.kgs)
-        predict.print_results()
-
-    def retest(self):
-        self.model.load_embeddings()
-        self.model.to(self.device)
-        t1 = time.time()
-        predict = LinkPredictionEvaluator(self.model, self.args, self.kgs)
-        predict.print_results()
-        print('test cost time: {:.4f}s'.format(time.time() - t1))
-
-    def get_pos_score(self, score):
-        tmp = score[:self.batch_size]
-        return tmp.view(self.batch_size, -1)
-
-    def get_neg_score(self, score):
-        tmp = score[self.batch_size:]
-        return tmp.view(self.batch_size, -1)
+    def eval_valid(self):
+        ent_embeds = self.ent_embeddings.weight.data
+        rel_embeds = self.rel_embeddings.weight.data
+        return ent_embeds, rel_embeds
 
     def save(self):
-        self.model.save()
+        mapping_mat = self.mapping_matrix.cpu().detach().numpy() if self.mapping_matrix is not None else None
+        if self.ent_embeddings is not None:
+            ent_embeds = self.ent_embeddings.cpu().weight.data
+            rel_embeds = self.rel_embeddings.cpu().weight.data
+            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
+        else:
+            ent_embeds = self.ent_embeds.cpu().weight.data
+            rel_embeds = self.rel_embeds.cpu().weight.data
+            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
+
+    def load_embeddings(self):
+        """
+        This function we used for link prediction, firstly we load embeddings,
+        the the evaluation class can simply pass the h, r, t ids to this function,
+        the model returns the score.
+        """
+        dir = self.out_folder.split("/")
+        new_dir = ""
+        print(dir)
+        for i in range(len(dir) - 2):
+            new_dir += (dir[i] + "/")
+        exist_file = os.listdir(new_dir)
+        new_dir = new_dir + "/"
+        if self.__class__.__name__ == 'ComplEx':
+            ent_re_embeddings = np.load(new_dir + "ent_re_embeddings.npy")
+            ent_im_embeddings = np.load(new_dir + "ent_im_embeddings.npy")
+            rel_re_embeddings = np.load(new_dir + "rel_re_embeddings.npy")
+            rel_im_embeddings = np.load(new_dir + "rel_im_embeddings.npy")
+            self.ent_re_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(ent_re_embeddings))
+            self.ent_im_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(ent_im_embeddings))
+            self.rel_re_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(rel_re_embeddings))
+            self.rel_im_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(rel_im_embeddings))
+            return
+        ent_embeds = np.load(new_dir + "ent_embeds.npy")
+        rel_embeds = np.load(new_dir + "rel_embeds.npy")
+        self.ent_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(ent_embeds))
+        self.rel_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(rel_embeds))
+        if self.__class__.__name__ == 'TransD':
+            ent_transfer = np.load(new_dir + "ent_transfer.npy")
+            rel_transfer = np.load(new_dir + "rel_transfer.npy")
+            self.ent_transfer = nn.Embedding.from_pretrained(torch.from_numpy(ent_transfer))
+            self.rel_transfer = nn.Embedding.from_pretrained(torch.from_numpy(rel_transfer))
+        elif self.__class__.__name__ == 'TransH':
+            norm_vector = np.load(new_dir + "norm_vector.npy")
+            self.norm_vector = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+        elif self.__class__.__name__ == 'Analogy':
+            norm_vector = np.load(new_dir + "ent_re_embeddings.npy")
+            self.ent_re_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+            norm_vector = np.load(new_dir + "ent_im_embeddings.npy")
+            self.ent_im_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+            norm_vector = np.load(new_dir + "rel_re_embeddings.npy")
+            self.rel_re_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+            norm_vector = np.load(new_dir + "rel_im_embeddings.npy")
+            self.rel_im_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+        elif self.__class__.__name__ == 'TransR':
+            norm_vector = np.load(new_dir + "transfer_matrix.npy")
+            self.transfer_matrix = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+
+    def get_score(self, h, r, t):
+        return self.calc(h, r, t)
+
+    def trans_score(self, h, r, t):
+        score = (h + r) - t
+        score = torch.pow(torch.norm(score, 2, -1), 2)
+        return score
+
+    def valid(self, stop_metric):
+
+        if len(self.kgs.valid_links) > 0:
+            seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
+            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device)), 2, -1)
+            '''seed_entity1 = self.ent_embeds(to_tensor(self.kgs.valid_entities1))
+            seed_entity2 = self.ent_embeds(to_tensor(self.kgs.valid_entities2))'''
+
+        else:
+            seed_entity1 = self.ent_embeds(to_tensor(self.kgs.test_entities1, self.device))
+            seed_entity2 = self.ent_embeds(to_tensor(self.kgs.test_entities2, self.device))
+        hits1_12, mrr_12 = valid(seed_entity1.cpu().detach().numpy(), seed_entity2.cpu().detach().numpy(),
+                                 None, self.args.top_k, self.args.test_threads_num, metric=self.args.eval_metric,
+                                 normalize=self.args.eval_norm, csls_k=0, accurate=False)
+        return hits1_12 if stop_metric == 'hits1' else mrr_12
+
+    def tests(self, entities1, entities2):
+        seed_entity1 = F.normalize(self.ent_embeds(to_tensor(entities1, self.device)), 2, -1)
+        seed_entity2 = F.normalize(self.ent_embeds(to_tensor(entities2, self.device)), 2, -1)
+        '''seed_entity1 = self.ent_embeds(to_tensor(entities1))
+        seed_entity2 = self.ent_embeds(to_tensor(entities2))'''
+        _, _, _, sim_list = test(seed_entity1.detach().numpy(), seed_entity2.detach().numpy(),
+                                 None,
+                                 self.args.top_k, self.args.test_threads_num, metric=self.args.eval_metric,
+                                 normalize=self.args.eval_norm,
+                                 csls_k=0, accurate=True)
+        print()
+        return sim_list
+
+    def load(self):
+        dir = self.out_folder.split("/")
+        new_dir = ""
+        print(dir)
+        for i in range(len(dir) - 2):
+            new_dir += (dir[i] + "/")
+        exist_file = os.listdir(new_dir)
+        new_dir = new_dir + "/"
+        self.ent_npy = np.load(new_dir + "ent_embeds.npy")
+        mapping = None
+
+        print(self.__class__.__name__, type(self.__class__.__name__))
+        if self.__class__.__name__ == "GCN_Align":
+            print(self.__class__.__name__, "loads attr embeds")
+            self.attr_npy = np.load(new_dir + "attr_embeds.npy")
+
+        # if self.__class__.__name__ == "MTransE" or self.__class__.__name__ == "SEA" or self.__class__.__name__ == "KDCoE":
+        if os.path.exists(new_dir + "mapping_mat.npy"):
+            print(self.__class__.__name__, "loads mapping mat")
+            self.map_npy = np.load(new_dir + "mapping_mat.npy")
 
 
-def get_pos_score(score, batch_size):
-    tmp = score[:batch_size]
-    return tmp.view(batch_size, -1)
-
-
-def get_neg_score(score, batch_size):
-    tmp = score[batch_size:]
-    return tmp.view(batch_size, -1)
-
-
-def general_dataloader(args, kgs):
-    triples_num = kgs.relation_triples_num
-    triple_steps = int(math.ceil(triples_num / args.batch_size))
-    steps_tasks = task_divide(list(range(triple_steps)), args.batch_threads_num)
-    manager = mp.Manager()
-    batch_queue = manager.Queue()
-    for steps_task in steps_tasks:
-        mp.Process(target=batch.generate_relation_triple_batch_queue,
-                   args=(kgs.relation_triples_list, [],
-                         kgs.relation_triples_set, set(),
-                         kgs.entities_list, [],
-                         args.batch_size, steps_task,
-                         batch_queue, None, None, args.neg_triple_num)).start()
-    pos_batch = list()
-    neg_batch = list()
-    for i in range(triple_steps):
-        batch_pos, batch_neg = batch_queue.get()
-        pos_batch += batch_pos
-        neg_batch += batch_neg
-    return ParallelDataset(pos_batch, neg_batch, args.neg_triple_num)
-
-
-def trainer(config: Dict):
-    global early_stop
-    args = config["args"]
-    kgs = config["kgs"]
-    model = config["model"]
-    # model.module.generate()
-    if args.is_gpu:
-        torch.cuda.set_device(3)
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cuda:2')
-    else:
-        device = torch.device('cpu')
-
-    model = train.torch.prepare_model(model)
-    optimizer = get_optimizer_torch(args.optimizer, model, args.learning_rate)
-    flag1 = -1
-    flag2 = -1
-
-    train_dataset = general_dataloader(args, kgs)
-    worker_batch_size = args.batch_size // train.world_size()
-    data_loader = DataLoader(train_dataset, batch_size=worker_batch_size)
-    '''data_loader1 = LoadDataset(kgs.kg1, kg1_size, args.batch_threads_num,
-                                args.neg_triple_num)
-    data_loader2 = LoadDataset(kgs.kg2, kg2_size, args.batch_threads_num,
-                               args.neg_triple_num)'''
-    data_loader = train.torch.prepare_data_loader(data_loader)
-    t = time.time()
-    for i in range(1, args.max_epoch + 1):
-        # data_loader_kg1 = iter(data_loader)
-        res = 0
-        start = time.time()
-        length = 0
-        for data in data_loader:
-            optimizer.zero_grad()
-            batch_size = data[0].shape[0]
-            length += batch_size
-            # batch_pos = np.array(batch_pos)
-            # batch_neg = np.array(batch_neg)
-            # data[3] = to_tensor(data[3], device)
-            data = {
-                'batch_h': torch.cat((data[0].squeeze(), data[3].squeeze()), 0),
-                'batch_r': torch.cat((data[1].squeeze(), data[4].squeeze()), 0),
-                'batch_t': torch.cat((data[2].squeeze(), data[5].squeeze()), 0)
-            }
-            ts = time.time()
-            score = model(data)
-            print("length is {}".format(batch_size))
-            print("time is {}".format(time.time() - ts))
-            po_score = get_pos_score(score, batch_size)
-            ne_score = get_neg_score(score, batch_size)
-            loss = get_loss_func_torch(po_score, ne_score, args)
-            loss.backward()
-            optimizer.step()
-            res += loss.item()
-        print('epoch {}, avg. triple loss: {:.4f}, cost time: {:.4f}s'.format(i, res / length, time.time() - start))
-        if i >= args.start_valid and i % args.eval_freq == 0:
-            t1 = time.time()
-            # flag = valid.print_results()
-            # print('valid cost time: {:.4f}s'.format(time.time() - start))
-    print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
-
-    # print(f"Loss results: {result}")
-
-
-class parallel_trainer(parallel_model):
+class parallel_model:
     def __init__(self):
-        super(parallel_trainer, self).__init__()
         self.kgs = None
         self.args = None
         self.early_stop = None
@@ -289,65 +219,95 @@ class parallel_trainer(parallel_model):
         self.flag1 = -1
         self.NetworkActor = None
 
-    def run(self):
-        ray.init(num_cpus=12)
-        t = time.time()
-        """
-        RemoteNetwork = ray.remote(mtranse_trainer)
-        self.NetworkActor = [RemoteNetwork.remote() for i in range(self.args.parallel_num)]
-        ray.get([Actor.init.remote(self.args, self.kgs) for Actor in self.NetworkActor])
-        self.split_dataset()
-        for i in range(1, self.args.max_epoch + 1):
-            ray.get([Actor.train.remote(i) for Actor in self.NetworkActor])
-            weights = ray.get([Actor.get_weights.remote() for Actor in self.NetworkActor])
+    def init(self, args, kgs):
+        self.args = args
+        self.kgs = kgs
 
-            '''averaged_weights = OrderedDict(
-                [(k, (weights[0][k] + weights[1][k] + weights[2][k]) / 3) for k in weights[0]])'''
-            averaged_weights = OrderedDict(
-                [(k, self.average_weight(weights, k)) for k in weights[0]])
+    def average_weight(self, weights, k):
+        average = 0
+        for i in range(self.args.parallel_num):
+            average += weights[i][k]
+        average /= self.args.parallel_num
+        return average
 
-            weight_id = ray.put(averaged_weights)
-            [
-                actor.set_weights.remote(weight_id)
-                for actor in self.NetworkActor
-            ]
-            if i >= self.args.start_valid and i % self.args.eval_freq == 0:
-                flag = ray.get([Actor.valid.remote() for Actor in self.NetworkActor])
-                self.flag1, self.flag2, self.early_stop = early_stop(self.flag1, self.flag2, flag[0])
-                if self.early_stop or i == self.args.max_epoch:
-                    break
-        print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
-        """
-        self.train_fashion_mnist()
+    def split_dataset(self):
+        kg1_list = task_divide(self.kgs.kg1.relation_triples_list, self.args.parallel_num)
+        kg2_list = task_divide(self.kgs.kg2.relation_triples_list, self.args.parallel_num)
+        self.NetworkActor[0].set_triple_list.remote(kg1_list[0], kg2_list[0])
+        ray.get([self.NetworkActor[i].set_triple_list.remote(kg1_list[i], kg2_list[i]) for i in
+                 range(self.args.parallel_num)])
 
-    def train_fashion_mnist(self):
-        trainer1 = Trainer(backend="torch", num_workers=2, use_gpu=False, resources_per_worker={"CPU":2})
-        trainer1.start()
-        result = trainer1.run(
-            train_func=trainer,
-            config={"args": self.args, "kgs": self.kgs, "model": self.model},
-            # callbacks=[],
-        )
-        trainer1.shutdown()
+    def test(self):
+        ray.get([Actor.test.remote() for Actor in self.NetworkActor])
 
 
-class ParallelDataset(Dataset):
-    def __init__(self, pos_batch, neg_batch, neg_num):  # add parameters here
-        self.pos = pos_batch
-        self.neg = neg_batch
-        assert neg_num == 1
-        self.neg_num = neg_num - 1
-        self.batch_size = len(self.pos)
-        # self.batch = self.pos + self.neg
-        # self.__count_htr()
+class parallel_model:
+    def __init__(self):
+        self.kgs = None
+        self.args = None
+        self.early_stop = None
+        self.flag2 = -1
+        self.flag1 = -1
+        self.NetworkActor = None
+        self.model = None
 
-    def __getitem__(self, index):
-        '''return self.pos[index][0], self.pos[index][1], self.pos[index][2], \
-               [x[0] for x in self.neg[index: index + self.neg_num]],\
-               [x[1] for x in self.neg[index: index + self.neg_num]], \
-               [x[2] for x in self.neg[index: index + self.neg_num]]'''
-        return self.pos[index][0], self.pos[index][1], self.pos[index][2], \
-               self.neg[index][0], self.neg[index][1], self.neg[index][2]
+    def init(self, args, kgs, mod):
+        self.args = args
+        self.kgs = kgs
+        self.model = mod
 
-    def __len__(self):
-        return len(self.pos)
+    def average_weight(self, weights, k):
+        average = 0
+        for i in range(self.args.parallel_num):
+            average += weights[i][k]
+        average /= self.args.parallel_num
+        return average
+
+    def split_dataset(self):
+        kg1_list = task_divide(self.kgs.kg1.relation_triples_list, self.args.parallel_num)
+        kg2_list = task_divide(self.kgs.kg2.relation_triples_list, self.args.parallel_num)
+        self.NetworkActor[0].set_triple_list.remote(kg1_list[0], kg2_list[0])
+        ray.get([self.NetworkActor[i].set_triple_list.remote(kg1_list[i], kg2_list[i]) for i in
+                 range(self.args.parallel_num)])
+
+    def test(self):
+        ray.get([Actor.test.remote() for Actor in self.NetworkActor])
+
+
+class align_model_trainer:
+    def __init__(self):
+        self.kgs = None
+        self.args = None
+        self.flag1 = -1
+        self.flag2 = -1
+        self.early_stop = None
+        self.device = None
+        self.model = None
+        print(self.device)
+
+    def init(self, args, kgs):
+        self.args = args
+        self.kgs = kgs
+
+    def valid(self):
+        return self.model.valid(self.args.stop_metric)
+
+    def test(self):
+        rest_12 = self.model.test(self.kgs.test_entities1, self.kgs.test_entities2)
+
+    def retest(self):
+        if self.__class__.__name__ == "gcn_align_trainer":
+            self.model = BasicModel(self.args, self.kgs)
+            self.model.out_folder = generate_out_folder(self.args.output, self.args.training_data,
+                                                        self.args.dataset_division,
+                                                        "GCN_Align")
+        self.model.load()
+        t = entity_alignment_evaluation(self.model, self.args, self.kgs)
+        t.test()
+
+    def save(self):
+        self.model.save()
+
+
+
+

@@ -11,6 +11,19 @@ class ModelFamily_tf(object):
         self.kgs = kgs
 
     def infer_model(self, model_name):
+        from src.tf.kge_models.kge_trainer import kge_trainer
+        # from src.tf.kge_models.transd import TransD
+
+        from src.tf.ea_models.bootea import BootEA
+        from src.tf.ea_models.rdgcn import RDGCN
+        from src.tf.ea_models.mtranse import MTransE
+        from src.tf.ea_models.attre import AttrE
+        from src.tf.ea_models.sea import SEA
+        from src.tf.ea_models.imuse import IMUSE
+        from src.tf.ea_models.gcn_align import GCN_Align
+        from src.tf.ea_models.iptranse import IPTransE
+        from src.tf.ea_models.jape import JAPE
+
         from src.tf.kge_models.Analogy import Analogy
         """
         from src.tf.kge_models.ComplEx import ComplEx
@@ -22,28 +35,17 @@ class ModelFamily_tf(object):
         from src.tf.kge_models.TransH import TransH
         from src.tf.kge_models.TransR import TransR
         """
-        from src.tf.kge_models.kge_trainer import kge_trainer
-        # from src.tf.kge_models.transd import TransD
-        """
-        from src.tf.ea_models.bootea import BootEA
-        from src.tf.ea_models.rdgcn import RDGCN
-        from src.tf.ea_models.mtranse import MTransE
-        from src.tf.ea_models.attre import AttrE
-        from src.tf.ea_models.sea import SEA
-        from src.tf.ea_models.imuse import IMUSE
-        from src.tf.ea_models.gcn_align import GCN_Align
-        from src.tf.ea_models.iptranse import IPTransE
-        from src.tf.ea_models.jape import JAPE
-        """
         # self.TransD = TransD()
-        '''self.TransH = TransH(kgs, args)
+        '''
+        self.TransH = TransH(kgs, args)
         self.TransE = TransE(kgs, args)
         self.HolE = HolE(kgs, args)
         self.Analogy = Analogy(kgs, args)
         self.RESCAL = RESCAL(kgs, args)
         self.ComplEx = ComplEx(kgs, args)
         self.DistMult = DistMult(kgs, args)
-        self.TransR = TransR(kgs, args)'''
+        self.TransR = TransR(kgs, args)
+        '''
         if model_name == 'Analogy':
             return Analogy(self.kgs, self.args)
         """
@@ -64,8 +66,8 @@ class ModelFamily_tf(object):
         elif model_name == 'DistMult':
             return DistMult(self.kgs, self.args)
         """
-        """
-        if model_name == 'Attre':
+
+        if model_name == 'AttrE':
             return AttrE()
         elif model_name == 'BootEA':
             return BootEA()
@@ -83,7 +85,6 @@ class ModelFamily_tf(object):
             return RDGCN()
         elif model_name == 'SEA':
             return SEA()
-        """
 
 
 class ModelFamily_torch(object):
@@ -133,7 +134,7 @@ class ModelFamily_torch(object):
         elif model_name == 'DistMult':
             return DistMult(self.kgs, self.args)
         # load ea models
-        if model_name == 'Attre':
+        if model_name == 'AttrE':
             return attre_trainer()
         elif model_name == 'BootEA':
             return bootea_trainer()

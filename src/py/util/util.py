@@ -46,6 +46,7 @@ def load_session():
     import tensorflow._api.v2.compat.v1 as tf
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    config.gpu_options.visible_device_list = '0,1,2'
     return tf.Session(config=config)
 
 
@@ -82,6 +83,6 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
     params = training_data_path.strip('/').split('/')
     print(out_folder, training_data_path, params, div_path, method_name)
     path = params[-1]
-    folder = out_folder + method_name + '/' + path + "/" + div_path
+    folder = out_folder + method_name + '/' + path + "/" + div_path + ""
     print("results output folder:", folder)
     return folder

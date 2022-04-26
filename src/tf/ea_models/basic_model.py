@@ -35,6 +35,9 @@ class BasicModel:
 
     def __init__(self):
 
+        self.ent_npy = None
+        self.map_npy = None
+        self.attr_npy = None
         self.out_folder = None
         self.args = None
         self.kgs = None
@@ -407,3 +410,24 @@ class BasicModel:
             print(self.out_folder + output_file_name, "saved")
 
         return topk_neighbors_w_sim
+    
+    def load(self):
+        dir = self.out_folder.split("/")
+        new_dir = ""
+        print(dir)
+        for i in range(len(dir) - 2):
+            new_dir += (dir[i] + "/")
+        exist_file = os.listdir(new_dir)
+        new_dir = new_dir + "/"
+        self.ent_npy = np.load(new_dir + "ent_embeds.npy")
+        mapping = None
+
+        print(self.__class__.__name__, type(self.__class__.__name__))
+        if self.__class__.__name__ == "GCN_Align":
+            print(self.__class__.__name__, "loads attr embeds")
+            self.attr_npy = np.load(new_dir + "attr_embeds.npy")
+
+        # if self.__class__.__name__ == "MTransE" or self.__class__.__name__ == "SEA" or self.__class__.__name__ == "KDCoE":
+        if os.path.exists(new_dir + "mapping_mat.npy"):
+            print(self.__class__.__name__, "loads mapping mat")
+            self.map_npy = np.load(new_dir + "mapping_mat.npy")

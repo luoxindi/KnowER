@@ -18,7 +18,7 @@
 	"loss": "margin-based",
 
     "neg_sampling": "uniform",
-	"neg_triple_num": 10,
+	"neg_triple_num": 1,
 
 	"learning_rate": 0.01,
     "optimizer": "Adam",

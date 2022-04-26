@@ -78,6 +78,7 @@ def margin_loss_tf(phs, prs, pts, nhs, nrs, nts, margin, loss_norm):
     with tf.name_scope('margin_loss_distance'):
         pos_distance = phs + prs - pts
         neg_distance = nhs + nrs - nts
+        dim = pos_distance.get_shape().as_list()[-1]
     with tf.name_scope('margin_loss'):
         if loss_norm == 'L1':  # L1 normal
             pos_score = tf.reduce_sum(tf.abs(pos_distance), axis=1)
@@ -85,6 +86,10 @@ def margin_loss_tf(phs, prs, pts, nhs, nrs, nts, margin, loss_norm):
         else:  # L2 normal
             pos_score = tf.reduce_sum(tf.square(pos_distance), axis=1)
             neg_score = tf.reduce_sum(tf.square(neg_distance), axis=1)
+        #batch_size = pos_score.get_shape()
+        #print(batch_size)
+        #pos_score = tf.reshape(pos_score, [-1, dim])
+        #neg_score = tf.reshape(neg_score, [-1, dim])
         loss = tf.reduce_sum(tf.nn.relu(tf.constant(margin) + pos_score - neg_score), name='margin_loss')
     return loss
 
