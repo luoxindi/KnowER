@@ -24,7 +24,7 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
         envs = "torch"
     else:
         envs = "tf"
-    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs
+    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs + "/"
     print("results output folder:", folder)
     return folder
 
@@ -86,15 +86,9 @@ class BasicModel(tf.keras.Model):
         return ent_embeds, rel_embeds
 
     def save(self):
-        mapping_mat = self.mapping_matrix.cpu().detach().numpy() if self.mapping_matrix is not None else None
-        if self.ent_embeddings is not None:
-            ent_embeds = self.ent_embeddings.cpu().weight.data
-            rel_embeds = self.rel_embeddings.cpu().weight.data
-            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
-        else:
-            ent_embeds = self.ent_embeds.cpu().weight.data
-            rel_embeds = self.rel_embeds.cpu().weight.data
-            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
+        ent_embeds = self.ent_embeddings.numpy()
+        rel_embeds = self.rel_embeddings.numpy()
+        read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, None)
 
     def load_embeddings(self):
         """
@@ -105,7 +99,7 @@ class BasicModel(tf.keras.Model):
         dir = self.out_folder.split("/")
         new_dir = ""
         print(dir)
-        for i in range(len(dir) - 2):
+        for i in range(len(dir) - 1):
             new_dir += (dir[i] + "/")
         exist_file = os.listdir(new_dir)
         new_dir = new_dir + "/"

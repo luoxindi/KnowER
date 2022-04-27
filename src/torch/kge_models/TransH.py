@@ -141,20 +141,6 @@ class TransH(BasicModel):
         score = self.calc(h, r, t).flatten()
         return score
 
-    def regularization(self, data):
-        batch_h = data['batch_h']
-        batch_t = data['batch_t']
-        batch_r = data['batch_r']
-        h = self.ent_embeddings(batch_h)
-        t = self.ent_embeddings(batch_t)
-        r = self.rel_embeddings(batch_r)
-        r_norm = self.norm_vector(batch_r)
-        regul = (torch.mean(h ** 2) +
-                 torch.mean(t ** 2) +
-                 torch.mean(r ** 2) +
-                 torch.mean(r_norm ** 2)) / 4
-        return regul
-
     def predict(self, data):
         score = self.forward(data)
         if self.margin_flag:

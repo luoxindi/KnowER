@@ -11,13 +11,7 @@ def get_loss_func_tf(phs, prs, pts, nhs, nrs, nts, args):
 
 def margin_loss_tfv2(pos_score, neg_score, margin, loss_norm):
     import tensorflow as tf
-    if loss_norm == 'L1':  # L1 normal
-        pos_score = tf.reduce_sum(tf.abs(pos_score), axis=1)
-        neg_score = tf.reduce_sum(tf.abs(neg_score), axis=1)
-    else:  # L2 normal
-        pos_score = tf.reduce_sum(tf.square(pos_score), axis=1)
-        neg_score = tf.reduce_sum(tf.square(neg_score), axis=1)
-    loss = tf.reduce_sum(tf.nn.relu(tf.constant(margin) + pos_score - neg_score))
+    loss = tf.reduce_sum(tf.nn.relu(margin + pos_score - neg_score))
     return loss
 
 

@@ -2,6 +2,7 @@ import time
 import tensorflow as tf
 
 from src.py.base.initializers import init_embeddings_v2, init_embeddings
+from src.py.base.losses import get_loss_func_tf, get_loss_func_tfv2
 
 tf.compat.v1.enable_eager_execution()
 from src.tf.kge_models.basic_model import BasicModel
@@ -9,13 +10,12 @@ from src.tf.kge_models.basic_model import BasicModel
 
 class TransE(BasicModel):
 
-    def __init__(self, kgs, args, dim=100, p_norm=2, norm_flag=True, margin=1.5, epsilon=None):
+    def __init__(self, kgs, args):
         super(TransE, self).__init__(args, kgs)
-        self.dim = dim
-        self.margin = margin
+        self.dim = self.args.dim
+        self.margin = self.args.margin
         # self.epsilon = epsilon
-        self.norm_flag = norm_flag
-        self.p_norm = 1
+        self.p_norm = self.args.loss_norm
 
         self.ent_embeddings = init_embeddings([self.ent_tot, self.dim], 'ent_embeddings',
                                                self.args.init, self.args.ent_l2_norm, dtype=tf.float32)
@@ -27,13 +27,13 @@ class TransE(BasicModel):
         '''h = F.normalize(h, 2, -1)
 		r = F.normalize(r, 2, -1)
 		t = F.normalize(t, 2, -1)'''
-        if self.p_norm == 1:
-            pos = tf.math.reduce_sum(tf.math.abs(h + r - t), -1)
+        if self.p_norm == 'L1':
+            score = tf.math.reduce_sum(tf.math.abs(h + r - t), -1)
         else:
-            pos = tf.math.reduce_sum((h + r - t) ** 2, -1)
+            score = tf.math.reduce_sum((h + r - t) ** 2, -1)
         # neg = tf.math.reduce_sum((neg_h_e + neg_r_e - neg_t_e) ** 2, 1, keepdims=True)
         # return tf.math.reduce_sum(tf.math.maximum(pos - neg + self.margin, 0))
-        return pos
+        return score
 
     def get_embeddings(self, h, r, t, mode='entity'):
         r_embs = tf.expand_dims(tf.nn.embedding_lookup(self.rel_embeddings, r), 1)
@@ -60,7 +60,8 @@ class TransE(BasicModel):
         self.batch_size = int(len(batch_h) / (self.args.neg_triple_num + 1))
         po_score = self.get_pos_score(score)
         ne_score = self.get_neg_score(score)
-        score = tf.math.reduce_sum(tf.math.maximum(po_score - ne_score + self.margin, 0))
+        score = get_loss_func_tfv2(po_score, ne_score, self.args)
+        #score = tf.math.reduce_sum(tf.math.maximum(po_score - ne_score + self.margin, 0))
         return score
 
 

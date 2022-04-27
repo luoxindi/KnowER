@@ -27,7 +27,7 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
         envs = "torch"
     else:
         envs = "tf"
-    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs
+    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs + "/"
     print("results output folder:", folder)
     return folder
 

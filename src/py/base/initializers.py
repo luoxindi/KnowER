@@ -44,7 +44,7 @@ def truncated_normal_init(shape, name, is_l2_norm, dtype=None):
 
 def random_uniform_init(shape, name, is_l2_norm, minval=0, maxval=None, dtype=None):
     import tensorflow._api.v2.compat.v1 as tf
-    tf.disable_eager_execution()  # 关闭eager运算
+    #tf.disable_eager_execution()  # 关闭eager运算
     # tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
     with tf.name_scope('random_uniform'):
         embeddings = tf.get_variable(name, shape=shape, dtype=dtype,
@@ -54,7 +54,7 @@ def random_uniform_init(shape, name, is_l2_norm, minval=0, maxval=None, dtype=No
 
 def random_unit_init(shape, name, is_l2_norm, dtype=None):
     import tensorflow._api.v2.compat.v1 as tf
-    tf.disable_eager_execution()  # 关闭eager运算
+    #tf.disable_eager_execution()  # 关闭eager运算
     # tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
     with tf.name_scope('random_unit_init'):
         vectors = list()
@@ -66,7 +66,7 @@ def random_unit_init(shape, name, is_l2_norm, dtype=None):
 
 def orthogonal_init(shape, name, dtype=None):
     import tensorflow._api.v2.compat.v1 as tf
-    tf.disable_eager_execution()  # 关闭eager运算
+    #tf.disable_eager_execution()  # 关闭eager运算
     # tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
     with tf.name_scope('orthogonal_init'):
         embeddings = tf.get_variable(name, shape=shape, dtype=dtype, initializer=tf.initializers.orthogonal())

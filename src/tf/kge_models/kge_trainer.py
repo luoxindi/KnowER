@@ -168,7 +168,6 @@ class kge_trainer:
 
     def retest(self):
         self.model.load_embeddings()
-        self.model.to(self.device)
         t1 = time.time()
         predict = LinkPredictionEvaluator(self.model, self.args, self.kgs)
         predict.print_results()

@@ -1,78 +1,43 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch import tensor, empty
-from torch.cuda import empty_cache
-from torch.nn import Parameter
+import tensorflow as tf
 from tqdm import tqdm
 
+from src.py.base.initializers import init_embeddings_v2, init_embeddings
+from src.py.base.losses import get_loss_func_tf, get_loss_func_tfv2
 from src.py.load import read
-from src.py.util.util import to_var
-from src.torch.kge_models.basic_model import BasicModel
+import numpy as np
+tf.compat.v1.enable_eager_execution()
+from src.tf.kge_models.basic_model import BasicModel
 
 
 class TransH(BasicModel):
 
-    def __init__(self, kgs, args, dim=100, p_norm=1, norm_flag=True, margin=None, epsilon=None):
+    def __init__(self, kgs, args):
         super(TransH, self).__init__(args, kgs)
 
         self.evaluated_projections = False
-        self.dim = dim
-        self.margin = nn.Parameter(
-    			torch.Tensor([self.args.margin]), 
-    			requires_grad=False
-    		)
-        self.epsilon = 2.0
-        self.norm_flag = norm_flag
-        self.p_norm = 1
-        self.projected = False
-        self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
-        self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
-        self.norm_vector = nn.Embedding(self.rel_tot, self.dim)
-        self.projected_entities = Parameter(empty(size=(self.rel_tot,
-                                                        self.ent_tot,
-                                                        self.dim)),
-                                            requires_grad=False)
-        nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.norm_vector.weight.data)
-        '''if margin == None or epsilon == None:
-            nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-            nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-            nn.init.xavier_uniform_(self.norm_vector.weight.data)'''
-        
-        self.embedding_range = nn.Parameter(
-            torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
-        )
-        nn.init.uniform_(
-            tensor=self.ent_embeddings.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-        nn.init.uniform_(
-            tensor=self.rel_embeddings.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-        nn.init.uniform_(
-            tensor=self.norm_vector.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
+        self.dim = self.args.dim
+        self.margin = self.args.margin
+        # self.epsilon = epsilon
+        self.p_norm = self.args.loss_norm
 
-        '''if margin is not None:
-            self.margin = nn.Parameter(torch.Tensor([margin]))
-            self.margin.requires_grad = False
-            self.margin_flag = True
-        else:
-            self.margin_flag = False'''
+        self.ent_embeddings = init_embeddings([self.ent_tot, self.dim], 'ent_embeddings',
+                                              self.args.init, self.args.ent_l2_norm, dtype=tf.double)
+        # 初始化关系翻译向量空间
+        self.rel_embeddings = init_embeddings([self.rel_tot, self.dim], 'rel_embeddings',
+                                              self.args.init, self.args.rel_l2_norm, dtype=tf.double)
+
+        self.norm_vector = init_embeddings([self.rel_tot, self.dim], 'norm_vector',
+                                              self.args.init, self.args.rel_l2_norm, dtype=tf.double)
+        self.projected = False
+        self.projected_entities = np.zeros(shape=(self.rel_tot, self.ent_tot, self.dim))
 
     def calc(self, h, r, t):
-        '''h = F.normalize(h, 2, -1)
-        r = F.normalize(r, 2, -1)
-        t = F.normalize(t, 2, -1)'''
-        score = (h + r) - t
-        score = torch.norm(score, self.p_norm, -1)
+        if self.p_norm == 'L1':
+            score = tf.math.reduce_sum(tf.math.abs(h + r - t), -1)
+        else:
+            score = tf.math.reduce_sum((h + r - t) ** 2, -1)
+        # neg = tf.math.reduce_sum((neg_h_e + neg_r_e - neg_t_e) ** 2, 1, keepdims=True)
+        # return tf.math.reduce_sum(tf.math.maximum(pos - neg + self.margin, 0))
         return score
 
     def evaluate_projections(self):
@@ -87,37 +52,31 @@ class TransH(BasicModel):
 
         for i in tqdm(range(self.ent_tot), unit='entities', desc='Projecting entities'):
 
-            norm_vect = self.norm_vector.weight.data.view(self.rel_tot, self.dim)
-            mask = tensor([i], device=norm_vect.device).long()
+            norm_vect = self.norm_vector
 
-            if norm_vect.is_cuda:
-                empty_cache()
+            ent = tf.nn.embedding_lookup(self.ent_embeddings, i)
+            norm_components = tf.reduce_sum(tf.reshape(ent, [1, -1]) * norm_vect, -1)
 
-            ent = self.ent_embeddings(mask)
-            norm_components = (ent.view(1, -1) * norm_vect).sum(dim=1)
-            self.projected_entities[:, i, :] = (ent.view(1, -1) - norm_components.view(-1, 1) * norm_vect)
+            self.projected_entities[:, i, :] = tf.reshape(ent, [1, -1]) - tf.reshape(norm_components, [-1, 1]) * norm_vect
 
             del norm_components
 
         self.projected = True
 
     def transfer(self, e, norm):
-        norm = F.normalize(norm, p=2, dim=-1)
-        return e - (e * norm).sum(dim=1).view(-1, 1) * norm
+        norm = tf.nn.l2_normalize(norm, -1)
+        return e - tf.reshape(tf.reduce_sum(e * norm, 1), [-1, 1]) * norm
 
     def get_score(self, h, r, t):
         return self.calc(h, r, t)
 
     def get_embeddings(self, hid, rid, tid, mode = 'entity'):
-        h = to_var(hid, self.device)
-        r = to_var(rid, self.device)
-        t = to_var(tid, self.device)
         self.evaluate_projections()
-        r_embs = self.rel_embeddings(r).unsqueeze(1)
+        r_embs = tf.expand_dims(tf.nn.embedding_lookup(self.rel_embeddings, rid), 1)
 
         if mode == 'entity':
-            proj_h = self.projected_entities[rid, hid].unsqueeze(1)  # shape: (b_size, 1, emb_dim)
-            proj_t = self.projected_entities[rid, tid].unsqueeze(1)  # shape: (b_size, 1, emb_dim)
+            proj_h = tf.expand_dims(self.projected_entities[rid, hid], 1)  # shape: (b_size, 1, emb_dim)
+            proj_t = tf.expand_dims(self.projected_entities[rid, tid], 1)  # shape: (b_size, 1, emb_dim)
             candidates = self.projected_entities[rid]  # shape: (b_size, self.n_rel, self.emb_dim)
             return proj_h, r_embs, proj_t, candidates
         else:
@@ -128,40 +87,23 @@ class TransH(BasicModel):
             candidates = candidates.expand(b_size, self.rel_tot, self.emb_dim)
             return proj_h, r_embs, proj_t, candidates
 
-    def forward(self, data):
+    def call(self, data):
         batch_h = data['batch_h']
         batch_t = data['batch_t']
         batch_r = data['batch_r']
-        h = self.ent_embeddings(batch_h)
-        t = self.ent_embeddings(batch_t)
-        r = self.rel_embeddings(batch_r)
-        r_norm = self.norm_vector(batch_r)
+        h = tf.nn.embedding_lookup(self.ent_embeddings, batch_h)
+        t = tf.nn.embedding_lookup(self.ent_embeddings, batch_t)
+        r = tf.nn.embedding_lookup(self.rel_embeddings, batch_r)
+        r_norm = tf.nn.embedding_lookup(self.norm_vector, batch_r)
         h = self.transfer(h, r_norm)
         t = self.transfer(t, r_norm)
-        score = self.calc(h, r, t).flatten()
+        score = tf.reshape(self.calc(h, r, t), [-1])
+        self.batch_size = int(len(batch_h) / (self.args.neg_triple_num + 1))
+        po_score = self.get_pos_score(score)
+        ne_score = self.get_neg_score(score)
+        score = get_loss_func_tfv2(po_score, ne_score, self.args)
+        # score = tf.math.reduce_sum(tf.math.maximum(po_score - ne_score + self.margin, 0))
         return score
-
-    def regularization(self, data):
-        batch_h = data['batch_h']
-        batch_t = data['batch_t']
-        batch_r = data['batch_r']
-        h = self.ent_embeddings(batch_h)
-        t = self.ent_embeddings(batch_t)
-        r = self.rel_embeddings(batch_r)
-        r_norm = self.norm_vector(batch_r)
-        regul = (torch.mean(h ** 2) +
-                 torch.mean(t ** 2) +
-                 torch.mean(r ** 2) +
-                 torch.mean(r_norm ** 2)) / 4
-        return regul
-
-    def predict(self, data):
-        score = self.forward(data)
-        if self.margin_flag:
-            score = self.margin - score
-            return score.cpu().data.numpy()
-        else:
-            return score.cpu().data.numpy()
 
     def save(self):
         ent_embeds = self.ent_embeddings.cpu().weight.data

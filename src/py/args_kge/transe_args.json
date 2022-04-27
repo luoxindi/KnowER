@@ -20,7 +20,7 @@
 	  
 	"learning_rate": 0.01,
     "optimizer": "Adagrad",
-	"max_epoch": 1000,
+	"max_epoch": 10,
 	"batch_size": 5000,
 
 	"batch_threads_num": 2,
