@@ -62,7 +62,7 @@ class kge_trainer:
         training_batch_queue = manager.Queue()
         neighbors1, neighbors2 = None, None
         start = time.time()
-        self.model.compile(optimizer=self.optimizer)
+        #self.model.compile(optimizer=self.optimizer)
         for i in range(self.args.max_epoch):
             res = 0
             tm = time.time()
@@ -91,12 +91,14 @@ class kge_trainer:
                         'batch_r': np.array([x[1] for x in datas]),
                         'batch_t': np.array([x[2] for x in datas])
                     }
-                    ts = time.time()
-                    score = self.model(data)
+                    loss = self.model(data)
+                    """
                     self.batch_size = len(batch_pos)
                     po_score = self.get_pos_score(score)
                     ne_score = self.get_neg_score(score)
                     loss = get_loss_func_tfv2(po_score, ne_score, self.args)
+                    """
+                #print(self.model.trainable_variables)
                 gradients = tape.gradient(loss, self.model.trainable_variables)
                 #print(self.model.trainable_variables)
                 # 把梯度和变量进行绑定

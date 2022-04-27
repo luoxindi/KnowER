@@ -1,8 +1,12 @@
 import math
 
 import tensorflow as tf
+
+from ...py.base.losses import get_loss_func_tfv2
+
+tf.compat.v1.enable_eager_execution()
 from .basic_model import BasicModel
-from ...py.base.initializers import init_embeddings, init_embeddings_v2
+from ...py.base.initializers import init_embeddings_v2
 from ...py.load import read
 from ...py.util.util import to_var
 
@@ -12,6 +16,30 @@ class Analogy(BasicModel):
     def __init__(self, kgs, args, dim=100):
         super(Analogy, self).__init__(args, kgs)
         self.dim = dim
+        self.ent_re_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.ent_tot, output_dim=self.dim, name="ent_re_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+        self.ent_im_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.ent_tot, output_dim=self.dim, name="ent_im_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+        self.rel_re_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.rel_tot, output_dim=self.dim, name="rel_re_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+        self.rel_im_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.rel_tot, output_dim=self.dim, name="rel_im_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+        self.ent_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.ent_tot, output_dim=self.dim, name="ent_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+        self.rel_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.rel_tot, output_dim=self.dim, name="rel_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+        """
         self.ent_re_embeddings = init_embeddings_v2([self.ent_tot, self.dim], 'ent_re_embeddings',
                                           self.args.init, self.args.ent_l2_norm, dtype=tf.float32)
         self.ent_im_embeddings = init_embeddings_v2([self.ent_tot, self.dim], 'ent_im_embeddings',
@@ -26,9 +54,6 @@ class Analogy(BasicModel):
                                                  self.args.init, self.args.ent_l2_norm, dtype=tf.float32)
         self.rel_embeddings = init_embeddings_v2([self.rel_tot, self.dim*2], 'rel_embeddings',
                                               self.args.init, self.args.ent_l2_norm, dtype=tf.float32)
-        """
-        ss = tf.compat.v1.Session()
-        ss.run(tf.compat.v1.global_variables_initializer())
         """
 
     def calc(self, h_re, h_im, h, t_re, t_im, t, r_re, r_im, r):
@@ -122,7 +147,23 @@ class Analogy(BasicModel):
         r_im = self.rel_im_embeddings(batch_r)
         r = self.rel_embeddings(batch_r)
         score = self.calc(h_re, h_im, h, t_re, t_im, t, r_re, r_im, r)
-        return score
+        self.batch_size = int(len(batch_h) / (self.args.neg_triple_num + 1))
+        po_score = self.get_pos_score(score)
+        ne_score = self.get_neg_score(score)
+        loss = self.logistic_loss_tfv2(po_score, ne_score, self.args)
+        return loss
+
+    def logistic_loss_tfv2(self, pos_score, neg_score, loss_norm):
+        if loss_norm == 'L1':  # L1 score
+            pos_score = tf.math.reduce_sum(tf.abs(pos_score), axis=1)
+            neg_score = tf.math.reduce_sum(tf.abs(neg_score), axis=1)
+        else:  # L2 score
+            pos_score = tf.math.reduce_sum(tf.square(pos_score), axis=1)
+            neg_score = tf.math.reduce_sum(tf.square(neg_score), axis=1)
+        pos_loss = tf.math.reduce_sum(tf.math.log(1 + tf.math.exp(pos_score)))
+        neg_loss = tf.math.reduce_sum(tf.math.log(1 + tf.math.exp(-neg_score)))
+        loss = tf.math.add(pos_loss, neg_loss)
+        return loss
 
     def save(self):
         ent_embeds = self.ent_embeddings.numpy() if self.ent_embeddings is not None else None
@@ -132,3 +173,50 @@ class Analogy(BasicModel):
         read.save_special_embeddings(self.out_folder, 'ent_im_embeddings', '', self.ent_im_embeddings.numpy(), None)
         read.save_special_embeddings(self.out_folder, 'rel_re_embeddings', '', self.rel_re_embeddings.numpy(), None)
         read.save_special_embeddings(self.out_folder, 'rel_im_embeddings', '', self.rel_im_embeddings.numpy(), None)
+
+
+"""        
+class Analogy(BasicModel):
+    '''TransE模型类，定义了TransE的参数空间和loss计算
+    '''
+
+    def __init__(self, kgs, args, dim=100):
+        super(Analogy, self).__init__(args, kgs)
+        self.entity_total = self.ent_tot  # 实体总数
+        self.relationship_total = self.rel_tot  # 关系总数
+        self.l1_flag = False  # L1正则化
+        self.margin = 1.5  # 合页损失函数中的样本差异度值
+        self.embedding_dim = dim  # 向量维度
+        # 初始化实体语义向量空间
+        self.ent_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.entity_total, output_dim=self.embedding_dim, name="ent_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+        # 初始化关系翻译向量空间
+        self.rel_embeddings = tf.keras.layers.Embedding(
+            input_dim=self.relationship_total, output_dim=self.embedding_dim, name="rel_embedding",
+            embeddings_initializer=tf.keras.initializers.glorot_normal(), )
+
+    def compute_loss(self, data):
+        # 计算一个批次数据的合页损失函数值
+        # 获得头、尾、关系的 ID
+        batch_h = data['batch_h']
+        batch_t = data['batch_t']
+        batch_r = data['batch_r']
+        pos_h_id, pos_t_id, pos_r_id, neg_h_id, neg_t_id, neg_r_id = x[:, 0], x[:, 1], x[:, 2], x[:, 3], x[:, 4], x[:, 5]
+        # 根据ID获得语义向量(E)和转移向量(T)
+        pos_h_e = self.ent_embeddings(pos_h_id)
+        pos_t_e = self.ent_embeddings(pos_t_id)
+        pos_r_e = self.rel_embeddings(pos_r_id)
+
+        neg_h_e = self.ent_embeddings(neg_h_id)
+        neg_t_e = self.ent_embeddings(neg_t_id)
+        neg_r_e = self.rel_embeddings(neg_r_id)
+
+        if self.l1_flag:
+            pos = tf.math.reduce_sum(tf.math.abs(pos_h_e + pos_r_e - pos_t_e), 1, keepdims=True)
+            neg = tf.math.reduce_sum(tf.math.abs(neg_h_e + neg_r_e - neg_t_e), 1, keepdims=True)
+        else:
+            pos = tf.math.reduce_sum((pos_h_e + pos_r_e - pos_t_e) ** 2, 1, keepdims=True)
+            neg = tf.math.reduce_sum((neg_h_e + neg_r_e - neg_t_e) ** 2, 1, keepdims=True)
+        return tf.math.reduce_sum(tf.math.maximum(pos - neg + self.margin, 0))
+"""

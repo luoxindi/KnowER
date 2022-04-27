@@ -108,11 +108,20 @@ def filter_scores(scores, dictionary, key1, key2, true_idx, low_value=True):
     return filt_scores
 
 
-def parse_triples(relation_set):
+def parse_types(relation_set):
     subjects, predicates, objects = list(), list(), list()
     for o, s in relation_set:
         subjects.append(s)
         predicates.append(0)
+        objects.append(o)
+    return objects, predicates, subjects
+
+
+def parse_triples(relation_set):
+    subjects, predicates, objects = list(), list(), list()
+    for o, p, s in relation_set:
+        subjects.append(s)
+        predicates.append(p)
         objects.append(o)
     return objects, predicates, subjects
 
@@ -135,7 +144,7 @@ class EntityTypeEvaluator:
             return score.cpu().detach().numpy()
         else:
             ''' needs to be implemented with tf'''
-            return score
+            return score.numpy()
 
     def freeze_model(self):
         for param in self.model.features.parameters():
@@ -163,7 +172,7 @@ class EntityTypeEvaluator:
         self.filt_rank_true_heads = np.array([])
         self.filt_rank_true_tails = np.array([])
         for triple_batch in tqdm(kg1_list):
-            head, relation, tail = parse_triples(triple_batch)
+            head, relation, tail = parse_types(triple_batch)
             start = time.time()
             h_embeds, r_embeds, t_embeds, candidates = self.model.get_embeddings(head, relation, tail)
             score = self.fomulate(self.model.get_score(h_embeds, r_embeds, candidates))
@@ -297,7 +306,7 @@ class LinkPredictionEvaluator:
             return score.cpu().detach().numpy()
         else:
             ''' needs to be implemented with tf'''
-            return score
+            return score.numpy()
 
     def freeze_model(self):
         for param in self.model.features.parameters():

@@ -3,7 +3,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from src.py.util.util import to_var
 from src.torch.kge_models.basic_model import BasicModel
 

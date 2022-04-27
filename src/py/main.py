@@ -15,8 +15,8 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 if __name__ == '__main__':
     t = time.time()
     curPath = os.path.abspath(os.path.dirname(__file__))
-    model_name = 'attre'
-    kg_task = 'ea'
+    model_name = 'transe'
+    kg_task = 'lp'
     if kg_task == 'ea':
         args = load_args(curPath + "/args_ea/" + model_name + r"_args_15K.json")
     elif kg_task == 'lp':
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         model = kge_models(args, kgs)
     else:
         model = et_models(args, kgs)
-    model.get_model('AttrE')
+    model.get_model('TransE')
     model.run()
     model.test()
     print("Total run time = {:.3f} s.".format(time.time() - t))

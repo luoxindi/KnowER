@@ -85,6 +85,17 @@ class BasicModel(tf.keras.Model):
         rel_embeds = self.rel_embeddings
         return ent_embeds, rel_embeds
 
+    def save(self):
+        mapping_mat = self.mapping_matrix.cpu().detach().numpy() if self.mapping_matrix is not None else None
+        if self.ent_embeddings is not None:
+            ent_embeds = self.ent_embeddings.cpu().weight.data
+            rel_embeds = self.rel_embeddings.cpu().weight.data
+            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
+        else:
+            ent_embeds = self.ent_embeds.cpu().weight.data
+            rel_embeds = self.rel_embeds.cpu().weight.data
+            read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat)
+
     def load_embeddings(self):
         """
         This function we used for link prediction, firstly we load embeddings,
@@ -133,27 +144,16 @@ class BasicModel(tf.keras.Model):
             norm_vector = np.load(new_dir + "transfer_matrix.npy")
             self.transfer_matrix.assign(norm_vector)
 
-    def load(self):
-        dir = self.out_folder.split("/")
-        new_dir = ""
-        print(dir)
-        for i in range(len(dir) - 2):
-            new_dir += (dir[i] + "/")
-        exist_file = os.listdir(new_dir)
-        new_dir = new_dir + "/"
-        self.ent_npy = np.load(new_dir + "ent_embeds.npy")
-        mapping = None
+    def get_pos_score(self, score):
+        tmp = score[:self.batch_size]
+        return tf.reshape(tmp, [self.batch_size, -1])
 
-        print(self.__class__.__name__, type(self.__class__.__name__))
-        if self.__class__.__name__ == "GCN_Align":
-            print(self.__class__.__name__, "loads attr embeds")
-            self.attr_npy = np.load(new_dir + "attr_embeds.npy")
+    def get_neg_score(self, score):
+        tmp = score[self.batch_size:]
+        return tf.reshape(tmp, [self.batch_size, -1])
 
-        # if self.__class__.__name__ == "MTransE" or self.__class__.__name__ == "SEA" or self.__class__.__name__ == "KDCoE":
-        if os.path.exists(new_dir + "mapping_mat.npy"):
-            print(self.__class__.__name__, "loads mapping mat")
-            self.map_npy = np.load(new_dir + "mapping_mat.npy")
-
+    def get_score(self, h, r, t):
+        return self.calc(h, r, t)
 
 
 
