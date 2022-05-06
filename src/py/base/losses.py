@@ -60,10 +60,24 @@ def get_loss_func_torch(pos_score, neg_score, args):
         triple_loss = margin_loss_torch(pos_score, neg_score, args.margin)
     elif args.loss == 'logistic':
         triple_loss = logistic_loss_torch(pos_score, neg_score)
+    elif args.loss == 'logistic_adv':
+        triple_loss = logistic_adv_loss_torch(pos_score, neg_score, args.adv)
     elif args.loss == 'limited':
         triple_loss = limited_loss_torch(pos_score, neg_score,  args.pos_margin, args.neg_margin)
     return triple_loss
 
+
+def logistic_adv_loss_torch(pos_score, neg_score, adv):
+    import torch
+    import torch.nn.functional as F
+    import torch.nn as nn
+    adv_temperature = nn.Parameter(torch.Tensor([adv]))
+    adv_temperature.requires_grad = False
+    weights = F.softmax(neg_score * adv, dim=-1).detach()
+    pos_loss = torch.sum(torch.log(1 + torch.exp(pos_score)))
+    neg_loss = torch.sum(weights * torch.log(1 + torch.exp(-neg_score)))
+    loss = (pos_loss + neg_loss) / 2
+    return loss
 
 def margin_loss_tf(phs, prs, pts, nhs, nrs, nts, margin, loss_norm):
     import tensorflow._api.v2.compat.v1 as tf
@@ -166,6 +180,20 @@ def logistic_loss_torch(pos_score, neg_score):
     neg_loss = torch.sum(torch.log(1 + torch.exp(-neg_score)))
     loss = pos_loss + neg_loss
     return loss
+
+
+def logistic_adv_loss_torch(pos_score, neg_score, adv):
+    import torch
+    pos_loss = torch.sum(torch.log(1 + torch.exp(pos_score)))
+    weights = get_weights(neg_score, adv)
+    neg_loss = torch.sum(weights * torch.log(1 + torch.exp(-neg_score)))
+    loss = (pos_loss + neg_loss) / 2
+    return loss
+
+
+def get_weights(n_score, adv):
+    import torch.nn.functional as F
+    return F.softmax(n_score * adv, dim=-1).detach()
 
 
 def mapping_loss_tf(tes1, tes2, mapping, eye):

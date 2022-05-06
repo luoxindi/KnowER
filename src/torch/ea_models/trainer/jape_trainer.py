@@ -80,7 +80,7 @@ class jape_trainer(align_model_trainer):
     def run_attr2vec(self):
         t = time.time()
         print("Training attribute embeddings:")
-        self.attr2vec.run()
+        #self.attr2vec.run()
         sim_mat = self.attr2vec.get_sim_mat()
         sim_mat[sim_mat < self.args.attr_sim_mat_threshold] = 0
         self.attr_sim_mat = sim_mat
@@ -124,3 +124,4 @@ class jape_trainer(align_model_trainer):
                 if self.early_stop or i == self.args.max_epoch:
                     break
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.model.save()

@@ -22,7 +22,6 @@ def early_stop(flag1, flag2, flag):
         return flag2, flag, False
 
 
-
 def add_compositional_func(character_vectors):
     value_vector_list = torch.mean(character_vectors, 1).squeeze()
     value_vector_list = F.normalize(value_vector_list, 2, -1)
@@ -101,11 +100,11 @@ class AttrE(BasicModel):
         norms = torch.norm(self.char_embeds.weight, p=2, dim=1).data
         self.char_embeds.weight.data = self.char_embeds.weight.data.div(
             norms.view(self.char_list_size, 1).expand_as(self.char_embeds.weight))'''
-        self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
-        self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
-        self.ent_embeds_ce.weight.data = F.normalize(self.ent_embeds_ce.weight.data, 2, -1)
-        self.attr_embeds.weight.data = F.normalize(self.attr_embeds.weight.data, 2, -1)
-        self.char_embeds.weight.data = F.normalize(self.char_embeds.weight.data, 2, -1)
+        # self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
+        # self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
+        # self.ent_embeds_ce.weight.data = F.normalize(self.ent_embeds_ce.weight.data, 2, -1)
+        # self.attr_embeds.weight.data = F.normalize(self.attr_embeds.weight.data, 2, -1)
+        # self.char_embeds.weight.data = F.normalize(self.char_embeds.weight.data, 2, -1)
 
     def generate_transE_loss(self, data):
         ph = data['pos_hs']
@@ -115,19 +114,20 @@ class AttrE(BasicModel):
         nr = data['neg_rs']
         nt = data['neg_ts']
         batch_size_now = ph.shape[0]
-        '''ph = F.normalize(self.ent_embeds(ph), 2, -1)
+        ph = F.normalize(self.ent_embeds(ph), 2, -1)
         pr = F.normalize(self.rel_embeds(pr), 2, -1)
         pt = F.normalize(self.ent_embeds(pt), 2, -1)
         nh = F.normalize(self.ent_embeds(nh), 2, -1)
         nr = F.normalize(self.rel_embeds(nr), 2, -1)
-        nt = F.normalize(self.ent_embeds(nt), 2, -1)'''
+        nt = F.normalize(self.ent_embeds(nt), 2, -1)
+        """
         ph = self.ent_embeds(ph)
         pr = self.rel_embeds(pr)
         pt = self.ent_embeds(pt)
         nh = self.ent_embeds(nh)
         nr = self.rel_embeds(nr)
         nt = self.ent_embeds(nt)
-
+        """
         pos = torch.pow(torch.norm(ph + pr - pt, 2, -1), 2)
         neg = torch.pow(torch.norm(nh + nr - nt, 2, -1), 2)
         pos = pos.view(batch_size_now, -1)
@@ -142,18 +142,20 @@ class AttrE(BasicModel):
         nas = data['neg_rs']
         nvs = data['neg_ts']
         batch_size_now = pes.shape[0]
-        '''ph = F.normalize(self.ent_embeds_ce(pes), 2, -1)
+        ph = F.normalize(self.ent_embeds_ce(pes), 2, -1)
         pr = F.normalize(self.attr_embeds(pas), 2, -1)
         pt = F.normalize(self.char_embeds(pvs), 2, -1)
         nh = F.normalize(self.ent_embeds_ce(nes), 2, -1)
         nr = F.normalize(self.attr_embeds(nas), 2, -1)
-        nt = F.normalize(self.char_embeds(nvs), 2, -1)'''
+        nt = F.normalize(self.char_embeds(nvs), 2, -1)
+        """
         ph = self.ent_embeds_ce(pes)
         pr = self.attr_embeds(pas)
         pt = self.char_embeds(pvs)
         nh = self.ent_embeds_ce(nes)
         nr = self.attr_embeds(nas)
         nt = self.char_embeds(nvs)
+        """
         '''pt = n_gram_compositional_func(pt, self.args.literal_len, batch_size_now, self.args.dim)
         nt = n_gram_compositional_func(nt, self.args.literal_len,
                                        batch_size_now, self.args.dim)'''
@@ -181,12 +183,14 @@ class AttrE(BasicModel):
         loss = torch.sum(torch.relu_(1 - cos_sim))'''
         loss = torch.sum(torch.pow(torch.norm(ent_se - ent_ce, 2, -1), 2))
         return loss
-        
+
     def test(self, entities1, entities2):
-        '''seed_entity1 = F.normalize(self.ent_embeds(to_tensor(entities1)), 2, -1)
-        seed_entity2 = F.normalize(self.ent_embeds(to_tensor(entities2)), 2, -1)'''
+        seed_entity1 = F.normalize(self.ent_embeds(entities1), 2, -1)
+        seed_entity2 = F.normalize(self.ent_embeds(entities2), 2, -1)
+        """
         seed_entity1 = self.ent_embeds(entities1)
         seed_entity2 = self.ent_embeds(entities2)
+        """
         _, _, _, sim_list = test(seed_entity1.cpu().detach().numpy(), seed_entity2.cpu().detach().numpy(), None,
                                  self.args.top_k, self.args.test_threads_num, metric=self.args.eval_metric,
                                  normalize=self.args.eval_norm,

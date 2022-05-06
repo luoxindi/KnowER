@@ -14,7 +14,7 @@ tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
 import numpy as np
 
 import scipy.sparse as sp
-from scipy.sparse.linalg.eigen.arpack import eigsh
+from scipy.sparse.linalg import eigsh
 
 '''
 Refactoring based on https://github.com/1049451037/GCN-Align
@@ -832,3 +832,4 @@ class GCN_Align(BasicModel):
         t = time.time()
         self.train_embeddings(self.struct_loss, self.struct_optimizer, self.model_se.outputs)
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

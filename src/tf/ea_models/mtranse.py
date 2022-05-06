@@ -1,4 +1,7 @@
 import tensorflow._api.v2.compat.v1 as tf
+
+from src.py.base.optimizers import generate_optimizer_tf
+
 tf.disable_eager_execution()  #关闭eager运算
 tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
 import math
@@ -9,7 +12,7 @@ import time
 from src.py.base.initializers import init_embeddings
 from src.py.base.losses import positive_loss_tf
 from src.py.load import batch
-from src.py.util.util import load_session, generate_optimizer, task_divide, early_stop
+from src.py.util.util import load_session, task_divide, early_stop
 from src.tf.ea_models.basic_model import BasicModel
 
 
@@ -29,7 +32,7 @@ class MTransE(BasicModel):
         # customize parameters
         # assert self.args.init == 'unit'
         assert self.args.alignment_module == 'mapping'
-        assert self.args.optimizer == 'Adagrad'
+        #assert self.args.optimizer == 'Adagrad'
         assert self.args.eval_metric == 'inner'
         assert self.args.ent_l2_norm is True
 
@@ -53,7 +56,7 @@ class MTransE(BasicModel):
             pts = tf.nn.embedding_lookup(self.ent_embeds, self.pos_ts)
         with tf.name_scope('triple_loss'):
             self.triple_loss = positive_loss_tf(phs, prs, pts, 'L2')
-            self.triple_optimizer = generate_optimizer(self.triple_loss, self.args.learning_rate, opt=self.args.optimizer)
+            self.triple_optimizer = generate_optimizer_tf(self.triple_loss, self.args.learning_rate, opt=self.args.optimizer)
 
     def launch_training_1epo(self, epoch, triple_steps, steps_tasks, training_batch_queue, neighbors1, neighbors2):
         self.launch_triple_training_1epo(epoch, triple_steps, steps_tasks, training_batch_queue, neighbors1, neighbors2)
@@ -109,4 +112,5 @@ class MTransE(BasicModel):
                 if self.early_stop or i == self.args.max_epoch:
                     break
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()
 

@@ -282,8 +282,8 @@ class IMUSE(BasicModel):
         elif self.args.init == 'uniform':
             nn.init.uniform_(self.ent_embeds.weight.data, 0)
             nn.init.uniform_(self.rel_embeds.weight.data, 0)
-        self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
-        self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
+        #self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
+        #self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
 
     def define_embed_graph(self, data):
         ph = data['pos_hs']
@@ -293,18 +293,20 @@ class IMUSE(BasicModel):
         nr = data['neg_rs']
         nt = data['neg_ts']
         batch_size_now = ph.shape[0]
-        '''ph = F.normalize(self.ent_embeds(ph), 2, -1)
+        ph = F.normalize(self.ent_embeds(ph), 2, -1)
         pr = F.normalize(self.rel_embeds(pr), 2, -1)
         pt = F.normalize(self.ent_embeds(pt), 2, -1)
         nh = F.normalize(self.ent_embeds(nh), 2, -1)
         nr = F.normalize(self.rel_embeds(nr), 2, -1)
-        nt = F.normalize(self.ent_embeds(nt), 2, -1)'''
+        nt = F.normalize(self.ent_embeds(nt), 2, -1)
+        """
         ph = self.ent_embeds(ph)
         pr = self.rel_embeds(pr)
         pt = self.ent_embeds(pt)
         nh = self.ent_embeds(nh)
         nr = self.rel_embeds(nr)
         nt = self.ent_embeds(nt)
+        """
         if self.args.loss_norm == "L2":
             pos = torch.pow(torch.norm(ph + pr - pt, 2, -1), 2)
             neg = torch.pow(torch.norm(nh + nr - nt, 2, -1), 2)
@@ -340,7 +342,7 @@ class IMUSE(BasicModel):
             '''seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device)), 2, -1)'''
             seed_entity1 = self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device))
-            seed_entity2 = self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device))
+            seed_entity2 = self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device))
         else:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities1, self.device)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities2, self.device)), 2, -1)

@@ -1,5 +1,7 @@
 import itertools
+import os
 import random
+import sys
 import time
 import torch
 import torch.nn as nn
@@ -12,6 +14,7 @@ from src.py.evaluation import evaluation
 from src.py.load import read
 from src.py.load.kg import KG
 from src.py.load.kgs import KGs
+from src.py.util.env_checker import module_exists
 
 
 def merge_dic(a, b):
@@ -21,10 +24,14 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
     params = training_data_path.strip('/').split('/')
     print(out_folder, training_data_path, params, div_path, method_name)
     path = params[-1]
-    folder = out_folder + method_name + '/' + path + "/" + div_path + "/"
+    if module_exists():
+        envs = "torch"
+    else:
+        envs = "tf"
+    folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs + "/"
     print("results output folder:", folder)
     return folder
-    
+
 
 def get_kg_popular_attributes(kg: KG, threshold):
     count_dic = dict()
@@ -95,6 +102,8 @@ class Attr2Vec(nn.Module):
 
     def set_args(self, args):
         self.args = args
+        self.out_folder = generate_out_folder(self.args.output, self.args.training_data, self.args.dataset_division,
+                            self.__class__.__name__)
         # self.out_folder = generate_out_folder(self.args.output, self.args.training_data, self.args.dataset_division, self.__class__.__name__)
 
     def init(self):
@@ -154,8 +163,18 @@ class Attr2Vec(nn.Module):
 
     def eval_attribute_embeddings(self):
         # return np.load(r'D:/OPENEA-pytorch/output/attr_embeds.npy')
-        a = self.embeds.weight.data
-        return a.cpu().detach().numpy()
+        try:
+            dir = self.out_folder.split("/")
+            new_dir = ""
+            print(dir)
+            for i in range(len(dir) - 1):
+                new_dir += (dir[i] + "/")
+            new_dir = new_dir + "/"
+            embeds = np.load(new_dir + "attr_embeds.npy")
+            return embeds
+        except:
+            a = self.embeds.weight.data
+            return a.cpu().detach().numpy()
 
     def eval_kg1_ent_embeddings(self):
         mat = get_ent_embeds_from_attributes(self.kgs, self.eval_attribute_embeddings(), self.selected_attributes)

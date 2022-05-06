@@ -25,7 +25,7 @@ class MTransE(BasicModel):
         # customize parameters
         #assert self.args.init == 'unit'
         assert self.args.alignment_module == 'mapping'
-        assert self.args.optimizer == 'Adagrad'
+        #assert self.args.optimizer == 'Adagrad'
         assert self.args.eval_metric == 'inner'
         assert self.args.ent_l2_norm is True
 
@@ -81,11 +81,12 @@ class MTransE(BasicModel):
     def generate_mapping_loss(self, data):
         seed_entity1 = data['seed1']
         seed_entity2 = data['seed2']
-        seed_entity1 = F.normalize(self.ent_embeds(seed_entity1), 2, -1)
+        #seed_entity1 = F.normalize(self.ent_embeds(seed_entity1), 2, -1)
+        seed_entity1 = self.ent_embeds(seed_entity1)
         seed_entity2 = F.normalize(self.ent_embeds(seed_entity2), 2, -1)
         seed_mapped_entity = F.normalize(torch.matmul(seed_entity1, self.mapping_matrix), 2, -1)
         distance = seed_mapped_entity - seed_entity2
-        align_loss = torch.sum(torch.norm(distance, 2, -1))
+        align_loss = torch.sum(torch.pow(torch.norm(distance, 2, -1), 2))
         orthogonal_loss = torch.mean(
             torch.sum(torch.pow(torch.matmul(self.mapping_matrix, self.mapping_matrix.t()) - self.eye_mat, 2), -1)
         )
@@ -94,7 +95,7 @@ class MTransE(BasicModel):
     def valid(self, stop_metric):
         if len(self.kgs.valid_links) > 0:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
-            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device)), 2, -1)
+            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device)), 2, -1)
         else:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities1, self.device)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities2, self.device)), 2, -1)

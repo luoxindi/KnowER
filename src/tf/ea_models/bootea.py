@@ -316,3 +316,4 @@ class BootEA(AlignE):
             ent_num = len(self.kgs.kg1.entities_list) + len(self.kgs.kg2.entities_list)
             print("generating neighbors of {} entities costs {:.3f} s.".format(ent_num, time.time() - t1))
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

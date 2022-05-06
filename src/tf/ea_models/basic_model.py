@@ -5,6 +5,9 @@ import time
 import gc
 
 import tensorflow._api.v2.compat.v1 as tf
+
+from src.py.base.optimizers import generate_optimizer_tf
+
 tf.disable_eager_execution()  #关闭eager运算
 tf.disable_v2_behavior()    #禁用TensorFlow 2.x行为
 import numpy as np
@@ -16,7 +19,7 @@ from src.py.base.mapping import add_mapping_variables, add_mapping_module
 from src.py.evaluation.evaluation import valid, test
 from src.py.evaluation.similarity import sim
 from src.py.load import read, batch
-from src.py.util.util import generate_out_folder, generate_optimizer, task_divide, early_stop
+from src.py.util.util import generate_out_folder, task_divide, early_stop
 
 
 class BasicModel:
@@ -93,7 +96,7 @@ class BasicModel:
             nts = tf.nn.embedding_lookup(self.ent_embeds, self.neg_ts)
         with tf.name_scope('triple_loss'):
             self.triple_loss = get_loss_func_tf(phs, prs, pts, nhs, nrs, nts, self.args)
-            self.triple_optimizer = generate_optimizer(self.triple_loss, self.args.learning_rate,
+            self.triple_optimizer = generate_optimizer_tf(self.triple_loss, self.args.learning_rate,
                                                        opt=self.args.optimizer)
 
     def _define_mapping_variables(self):
@@ -139,10 +142,10 @@ class BasicModel:
     def retest(self):
         dir = self.out_folder.split("/")
         new_dir = ""
-        for i in range(len(dir) - 2):
+        for i in range(len(dir) - 1):
             new_dir += (dir[i] + "/")
-        exist_file = os.listdir(new_dir)
-        new_dir = new_dir + exist_file[0] + "/"
+        #exist_file = os.listdir(new_dir)
+        #new_dir = new_dir + exist_file[0] + "/"
         embeds = np.load(new_dir + "ent_embeds.npy")
         embeds1 = embeds[self.kgs.test_entities1]
         embeds2 = embeds[self.kgs.test_entities2]
@@ -173,10 +176,10 @@ class BasicModel:
         else:
             test(embeds2, embeds1, mapping, self.args.top_k, self.args.test_threads_num,
                  metric=self.args.eval_metric, normalize=self.args.eval_norm, csls_k=0, accurate=True)
-        print("stable test:")
+        #print("stable test:")
         '''stable_alignment(embeds1, embeds2, self.args.eval_metric, self.args.eval_norm, csls_k=0,
                          nums_threads=self.args.test_threads_num)'''
-        print("stable test with csls:")
+        #print("stable test with csls:")
         '''stable_alignment(embeds1, embeds2, self.args.eval_metric, self.args.eval_norm, csls_k=self.args.csls,
                          nums_threads=self.args.test_threads_num)'''
 

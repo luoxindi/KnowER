@@ -160,3 +160,4 @@ class SEA(BasicModel):
                 if self.early_stop or i == self.args.max_epoch:
                     break
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

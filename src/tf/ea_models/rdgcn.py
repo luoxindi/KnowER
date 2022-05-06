@@ -535,3 +535,4 @@ class RDGCN(BasicModel):
         self.training()
         print("training finish")
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

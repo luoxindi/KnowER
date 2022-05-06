@@ -10,26 +10,6 @@ def to_var(batch, device):
     return Variable(torch.from_numpy(np.array(batch)).to(device))
 
 
-def generate_optimizer(loss, learning_rate, var_list=None, opt='SGD'):
-    optimizer = get_optimizer(opt, learning_rate)
-    grads_and_vars = optimizer.compute_gradients(loss, var_list=var_list)
-    return optimizer.apply_gradients(grads_and_vars)
-
-
-def get_optimizer(opt, learning_rate):
-    import tensorflow._api.v2.compat.v1 as tf
-    if opt == 'Adagrad':
-        optimizer = tf.train.AdagradOptimizer(learning_rate)
-    elif opt == 'Adadelta':
-        # To match the exact form in the original paper use 1.0.
-        optimizer = tf.train.AdadeltaOptimizer(learning_rate)
-    elif opt == 'Adam':
-        optimizer = tf.train.AdamOptimizer(learning_rate)
-    else:  # opt == 'SGD'
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    return optimizer
-
-
 def to_tensor(batch, device):
     from torch.autograd import Variable
     import torch
@@ -92,3 +72,11 @@ def generate_out_folder(out_folder, training_data_path, div_path, method_name):
     folder = out_folder + method_name + '/' + path + "/" + div_path + "/" + envs + "/"
     print("results output folder:", folder)
     return folder
+
+
+def parse_resources(res):
+    try:
+        device, number = res.split(':')
+        return device, int(number)
+    except:
+        raise Exception("Invalid input of resources")

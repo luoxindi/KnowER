@@ -4,7 +4,6 @@ from src.py.evaluation.evaluation import LinkPredictionEvaluator
 from src.py.util.env_checker import module_exists
 
 
-
 class ModelFamily_tf(object):
     def __init__(self, args, kgs):
         self.args = args
@@ -102,6 +101,10 @@ class ModelFamily_torch(object):
         from src.torch.kge_models.TransE import TransE
         from src.torch.kge_models.TransH import TransH
         from src.torch.kge_models.TransR import TransR
+        from src.torch.kge_models.RotatE import RotatE
+        #from src.torch.kge_models.SimplE import SimplE
+        from src.torch.kge_models.TuckER import TuckER
+        from src.torch.kge_models.ConvE import ConvE
         from src.torch.ea_models.trainer.attre_trainer import attre_trainer
         from src.torch.ea_models.trainer.bootea_trainer import bootea_trainer
         from src.torch.ea_models.trainer.gcn_align_trainer import gcn_align_trainer
@@ -111,12 +114,17 @@ class ModelFamily_torch(object):
         from src.torch.ea_models.trainer.mtranse_trainer import mtranse_trainer
         from src.torch.ea_models.trainer.rdgcn_trainer import rdgcn_trainer
         from src.torch.ea_models.trainer.sea_trainer import sea_trainer
-        from src.torch.et_models.connecte_trainer import connecte_trainer
         from src.torch.et_models.TransE_ET import TransE_ET
+        from src.torch.et_models.RESCAL_ET import RESCAL_ET
+        from src.torch.et_models.HolE_ET import HolE_ET
         if model_name == 'TransE':
             return TransE(self.kgs, self.args)
         if model_name == 'TransE_ET':
             return TransE_ET(self.kgs, self.args)
+        elif model_name == 'RESCAL_ET':
+            return RESCAL_ET(self.args, self.kgs) 
+        elif model_name == 'HolE_ET':
+            return HolE_ET(self.args, self.kgs) 
         elif model_name == 'TransD':
             return TransD(self.args, self.kgs)
         elif model_name == 'TransH':
@@ -133,6 +141,14 @@ class ModelFamily_torch(object):
             return ComplEx(self.kgs, self.args)
         elif model_name == 'DistMult':
             return DistMult(self.kgs, self.args)
+        elif model_name == 'RotatE':
+            return RotatE(self.args, self.kgs)
+        #elif model_name == 'SimplE':
+        #    return SimplE(self.args, self.kgs)
+        elif model_name == 'TuckER':
+            return TuckER(self.args, self.kgs)
+        elif model_name == 'ConvE':
+            return ConvE(self.args, self.kgs)
         # load ea models
         if model_name == 'AttrE':
             return attre_trainer()
@@ -152,8 +168,6 @@ class ModelFamily_torch(object):
             return rdgcn_trainer()
         elif model_name == 'SEA':
             return sea_trainer()
-        elif model_name == 'ConnectE':
-            return connecte_trainer()
         # self.SimplE = SimplE(kgs, args)
 
 
@@ -173,7 +187,10 @@ class kge_models:
             mf = ModelFamily_torch(self.args, self.kgs)
             self.args.is_torch = True
             mod = mf.infer_model(model_name)
-            self.model = kge_trainer()
+            if self.args.is_parallel:
+                self.model = parallel_trainer()
+            else:
+                self.model = kge_trainer()
             self.model.init(self.args, self.kgs, mod)
         else:
             from src.tf.kge_models.kge_trainer import kge_trainer
@@ -216,7 +233,7 @@ class ea_models:
             self.model.set_args(self.args)
             self.model.set_kgs(self.kgs)
             self.model.init()
-            self.model.run()
+            #self.model.run()
 
     def test(self):
         self.model.retest()

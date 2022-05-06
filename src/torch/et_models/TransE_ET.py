@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.py.load import read
 from src.py.util.util import to_var
 from src.torch.kge_models.basic_model import BasicModel
 
@@ -12,8 +13,8 @@ class TransE_ET(BasicModel):
 
     def __init__(self, kgs, args, dim=100, p_norm=2, norm_flag=True, margin=1.5, epsilon=None):
         super(TransE_ET, self).__init__(args, kgs)
-        self.dim = dim
-        self.margin = margin
+        self.dim = self.args.dim
+        self.margin = 2
         # self.epsilon = epsilon
         self.norm_flag = norm_flag
         self.p_norm = 1
@@ -80,3 +81,10 @@ class TransE_ET(BasicModel):
         r = self.rel_embeddings(batch_r)
         score = self.calc(h, r, t).flatten()
         return score
+
+    def save(self):
+        ent_embeds = self.ent_embeddings.cpu().weight.data
+        rel_embeds = self.rel_embeddings.cpu().weight.data
+        read.save_embeddings(self.out_folder, self.kgs, ent_embeds, rel_embeds, None, mapping_mat=None)
+        type_embeddings = self.type_embeddings.cpu().weight.data
+        read.save_special_embeddings(self.out_folder, 'type_embeddings', '', type_embeddings, None)

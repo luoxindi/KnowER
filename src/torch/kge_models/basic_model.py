@@ -39,6 +39,7 @@ class BasicModel(nn.Module):
 
     def __init__(self, args, kgs):
         super(BasicModel, self).__init__()
+        self.type_embeddings = None
         self.transfer_matrix = None
         self.rel_im_embeddings = None
         self.rel_re_embeddings = None
@@ -117,7 +118,7 @@ class BasicModel(nn.Module):
         dir = self.out_folder.split("/")
         new_dir = ""
         print(dir)
-        for i in range(len(dir) - 2):
+        for i in range(len(dir) - 1):
             new_dir += (dir[i] + "/")
         exist_file = os.listdir(new_dir)
         new_dir = new_dir + "/"
@@ -155,6 +156,10 @@ class BasicModel(nn.Module):
         elif self.__class__.__name__ == 'TransR':
             norm_vector = np.load(new_dir + "transfer_matrix.npy")
             self.transfer_matrix = nn.Embedding.from_pretrained(torch.from_numpy(norm_vector))
+        elif self.__class__.__name__ == 'TransE_ET' or self.__class__.__name__ == 'RESCAL_ET' or self.__class__.__name__ == 'HolE_ET':
+            type_embeddings = np.load(new_dir + "type_embeddings.npy")
+            self.type_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(type_embeddings))
+
 
     def get_score(self, h, r, t):
         return self.calc(h, r, t)
@@ -197,7 +202,7 @@ class BasicModel(nn.Module):
         dir = self.out_folder.split("/")
         new_dir = ""
         print(dir)
-        for i in range(len(dir) - 2):
+        for i in range(len(dir) - 1):
             new_dir += (dir[i] + "/")
         exist_file = os.listdir(new_dir)
         new_dir = new_dir + "/"

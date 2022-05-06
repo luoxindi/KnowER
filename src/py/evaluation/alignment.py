@@ -3,7 +3,7 @@ import itertools
 import multiprocessing
 import time
 import numpy as np
-from scipy.spatial.distance import cdist
+#from scipy.spatial.distance import cdist
 
 # from src.modules.finding.similarity import sim
 from src.py.evaluation.similarity import sim

@@ -1,7 +1,7 @@
 import itertools
 import time
 
-#import igraph as ig
+import igraph as ig
 import numpy as np
 # from graph_tool.all import Graph, max_cardinality_matching  # necessary
 # from graph_tool.all import Graph, max_cardinality_matching  # necessary

@@ -2,7 +2,8 @@ import tensorflow._api.v2.compat.v1 as tf
 
 from src.py.base.initializers import init_embeddings
 from src.py.base.optimizers import generate_optimizer_tf
-from src.py.util.util import load_session, task_divide
+from src.py.load import batch
+from src.py.util.util import load_session, task_divide, early_stop
 from src.tf.ea_models.attr2vec import Attr2Vec
 from src.tf.ea_models.basic_model import BasicModel
 
@@ -36,7 +37,7 @@ class JAPE(BasicModel):
         assert self.args.alignment_module == 'sharing'
         assert self.args.init == 'normal'
         assert self.args.neg_sampling == 'uniform'
-        assert self.args.optimizer == 'Adagrad'
+        #assert self.args.optimizer == 'Adagrad'
         assert self.args.eval_metric == 'inner'
         assert self.args.loss_norm == 'L2'
 
@@ -100,7 +101,7 @@ class JAPE(BasicModel):
     def launch_triple_training_1epo(self, epoch, triple_steps, steps_tasks, batch_queue, neighbors1, neighbors2):
         start = time.time()
         for steps_task in steps_tasks:
-            mp.Process(target=bat.generate_relation_triple_batch_queue,
+            mp.Process(target=batch.generate_relation_triple_batch_queue,
                        args=(self.kgs.kg1.relation_triples_list, self.kgs.kg2.relation_triples_list,
                              self.kgs.kg1.relation_triples_set, self.kgs.kg2.relation_triples_set,
                              self.kgs.kg1.entities_list, self.kgs.kg2.entities_list,
@@ -167,3 +168,4 @@ class JAPE(BasicModel):
                 if self.early_stop or i == self.args.max_epoch:
                     break
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

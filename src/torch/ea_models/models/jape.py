@@ -30,7 +30,7 @@ class JAPE(BasicModel):
         assert self.args.alignment_module == 'sharing'
         assert self.args.init == 'normal'
         assert self.args.neg_sampling == 'uniform'
-        assert self.args.optimizer == 'Adagrad'
+        #assert self.args.optimizer == 'Adagrad'
         assert self.args.eval_metric == 'inner'
         assert self.args.loss_norm == 'L2'
 
@@ -50,6 +50,8 @@ class JAPE(BasicModel):
         self.margin.requires_grad = False
         nn.init.xavier_uniform_(self.ent_embeds.weight.data)
         nn.init.xavier_uniform_(self.rel_embeds.weight.data)
+        #self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
+        #self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
         '''if self.args.init == 'xavier':
             nn.init.xavier_uniform_(self.ent_embeds.weight.data)
             nn.init.xavier_uniform_(self.rel_embeds.weight.data)
@@ -75,6 +77,14 @@ class JAPE(BasicModel):
         nh = F.normalize(self.ent_embeds(nh), 2, -1)
         nr = F.normalize(self.rel_embeds(nr), 2, -1)
         nt = F.normalize(self.ent_embeds(nt), 2, -1)
+        """
+        ph = self.ent_embeds(ph)
+        pr = self.rel_embeds(pr)
+        pt = self.ent_embeds(pt)
+        nh = self.ent_embeds(nh)
+        nr = self.rel_embeds(nr)
+        nt = self.ent_embeds(nt)
+        """
         if self.args.loss_norm == "L2":
             pos = torch.pow(torch.norm(ph + pr - pt, 2, -1), 2)
             neg = torch.pow(torch.norm(nh + nr - nt, 2, -1), 2)
@@ -88,7 +98,7 @@ class JAPE(BasicModel):
     def valid(self, stop_metric):
         if len(self.kgs.valid_links) > 0:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
-            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device)), 2, -1)
+            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device)), 2, -1)
         else:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities1, self.device)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities2, self.device)), 2, -1)
@@ -100,7 +110,7 @@ class JAPE(BasicModel):
     def define_sim_graph(self, data):
         entities1 = data['entities1']
         attr_sim_mat_place = data['sim_mat']
-        ref1 = self.ent_embeds(entities1)
+        ref1 = F.normalize(self.ent_embeds(entities1), 2, -1)
         ref2 = self.ent_embeds(to_tensor(self.ref_entities2, self.device))
         ref2_trans = torch.matmul(attr_sim_mat_place, ref2)
         ref2_trans = F.normalize(ref2_trans, 2, -1)

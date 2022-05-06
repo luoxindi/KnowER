@@ -60,8 +60,8 @@ class SEA(BasicModel):
         elif self.args.init == 'uniform':
             nn.init.uniform_(self.ent_embeds.weight.data, 0)
             nn.init.uniform_(self.rel_embeds.weight.data, 0)
-        self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
-        self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
+        #self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
+        #self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
 
     def generate_transE_loss(self, data):
         ph = data['pos_hs']
@@ -71,12 +71,20 @@ class SEA(BasicModel):
         nr = data['neg_rs']
         nt = data['neg_ts']
         batch_size_now = ph.shape[0]
-        ph = self.ent_embeds(ph)
-        pr = self.rel_embeds(pr)
-        pt = self.ent_embeds(pt)
-        nh = self.ent_embeds(nh)
-        nr = self.rel_embeds(nr)
-        nt = self.ent_embeds(nt)
+        if self.args.ent_l2_norm:
+          ph = F.normalize(self.ent_embeds(ph), 2, -1)
+          pr = F.normalize(self.rel_embeds(pr), 2, -1)
+          pt = F.normalize(self.ent_embeds(pt), 2, -1)
+          nh = F.normalize(self.ent_embeds(nh), 2, -1)
+          nr = F.normalize(self.rel_embeds(nr), 2, -1)
+          nt = F.normalize(self.ent_embeds(nt), 2, -1)
+        else:
+          ph = self.ent_embeds(ph)
+          pr = self.rel_embeds(pr)
+          pt = self.ent_embeds(pt)
+          nh = self.ent_embeds(nh)
+          nr = self.rel_embeds(nr)
+          nt = self.ent_embeds(nt)
         if self.args.loss_norm == "L2":
             pos = torch.pow(torch.norm(ph + pr - pt, 2, -1), 2)
             neg = torch.pow(torch.norm(nh + nr - nt, 2, -1), 2)
@@ -92,14 +100,20 @@ class SEA(BasicModel):
         seed_entity2_labeled = data['seed2_labeled']
         seed_entity1_unlabeled = data['seed1_unlabeled']
         seed_entity2_unlabeled = data['seed2_unlabeled']
-        seed_entity1_labeled = self.ent_embeds(seed_entity1_labeled)
-        seed_entity2_labeled = self.ent_embeds(seed_entity2_labeled)
-        seed_entity1_unlabeled = self.ent_embeds(seed_entity1_unlabeled)
-        seed_entity2_unlabeled = self.ent_embeds(seed_entity2_unlabeled)
+        if self.args.ent_l2_norm:
+          seed_entity1_labeled = F.normalize(self.ent_embeds(seed_entity1_labeled), 2, -1)
+          seed_entity2_labeled = F.normalize(self.ent_embeds(seed_entity2_labeled), 2, -1)
+          seed_entity1_unlabeled = F.normalize(self.ent_embeds(seed_entity1_unlabeled), 2, -1)
+          seed_entity2_unlabeled = F.normalize(self.ent_embeds(seed_entity2_unlabeled), 2, -1)
+        else:
+          seed_entity1_labeled = self.ent_embeds(seed_entity1_labeled)
+          seed_entity2_labeled = self.ent_embeds(seed_entity2_labeled)
+          seed_entity1_unlabeled = self.ent_embeds(seed_entity1_unlabeled)
+          seed_entity2_unlabeled = self.ent_embeds(seed_entity2_unlabeled)
         map12 = F.normalize(torch.matmul(seed_entity1_labeled, self.mapping_matrix_1), 2, -1)
         map21 = F.normalize(torch.matmul(seed_entity2_labeled, self.mapping_matrix_2), 2, -1)
-        map_loss12 = torch.sum(torch.pow(torch.norm(seed_entity2_labeled-map12, 2, -1), 2))
-        map_loss21 = torch.sum(torch.pow(torch.norm(seed_entity1_labeled-map21, 2, -1), 2))
+        map_loss12 = torch.sum(torch.pow(torch.norm(seed_entity2_labeled - map12, 2, -1), 2))
+        map_loss21 = torch.sum(torch.pow(torch.norm(seed_entity1_labeled - map21, 2, -1), 2))
         semi_map121 = F.normalize(torch.matmul(torch.matmul(seed_entity1_unlabeled, self.mapping_matrix_1), self.mapping_matrix_2), 2, -1)
         semi_map212 = F.normalize(torch.matmul(torch.matmul(seed_entity2_unlabeled, self.mapping_matrix_2), self.mapping_matrix_1), 2, -1)
         map_loss11 = torch.sum(torch.pow(torch.norm(seed_entity1_unlabeled - semi_map121, 2, -1), 2))
@@ -111,7 +125,7 @@ class SEA(BasicModel):
     def valid(self, stop_metric):
         if len(self.kgs.valid_links) > 0:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
-            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2, self.device)), 2, -1)
+            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device)), 2, -1)
         else:
             seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities1, self.device)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities2, self.device)), 2, -1)

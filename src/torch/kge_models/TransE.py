@@ -17,37 +17,40 @@ class TransE(BasicModel):
 		self.norm_flag = norm_flag
 		self.p_norm = 1
 
-		'''self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
+		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
 
 		nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
 		nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+		"""
 		self.margin = nn.Parameter(torch.Tensor([margin]))
 		self.margin.requires_grad = False
-		self.margin_flag = False'''
+		self.margin_flag = False
 		self.epsilon = 2.0
 		self.margin = nn.Parameter(
-			torch.Tensor([self.args.margin]), 
+			torch.Tensor([self.args.margin]),
 			requires_grad=False
 		)
 		self.embedding_range = nn.Parameter(
-			torch.Tensor([(self.margin.item() + self.epsilon) / self.dim]), 
+			torch.Tensor([(self.margin.item() + self.epsilon) / self.dim]),
 			requires_grad=False
 		)
-	
+
 		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
 		nn.init.uniform_(tensor=self.ent_embeddings.weight.data, a=-self.embedding_range.item(), b=self.embedding_range.item())
 		nn.init.uniform_(tensor=self.rel_embeddings.weight.data, a=-self.embedding_range.item(), b=self.embedding_range.item())
-		'''self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
-		self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)'''
+		"""
+		self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
+		self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)
 
 	def calc(self, h, r, t):
-		'''h = F.normalize(h, 2, -1)
-		r = F.normalize(r, 2, -1)
-		t = F.normalize(t, 2, -1)'''
+		h = F.normalize(h, 2, -1)
+		#r = F.normalize(r, 2, -1)
+		t = F.normalize(t, 2, -1)
 		score = (h + r) - t
-		score = torch.pow(torch.norm(score, self.p_norm, -1), 2)
+		#score = torch.pow(torch.norm(score, self.p_norm, -1), 2)
+		score = torch.norm(score, self.p_norm, -1)
 		return score
 
 	def get_embeddings(self, hid, rid, tid, mode='entity'):

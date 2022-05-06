@@ -183,9 +183,9 @@ class BootEA(BasicModel):
         nn.init.normal_(self.rel_embeds.weight.data, std=0.1)'''
         nn.init.xavier_normal_(self.ent_embeds.weight.data)
         nn.init.xavier_normal_(self.rel_embeds.weight.data)
-    
-        self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
-        self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
+
+        # self.ent_embeds.weight.data = F.normalize(self.ent_embeds.weight.data, 2, -1)
+        # self.rel_embeds.weight.data = F.normalize(self.rel_embeds.weight.data, 2, -1)
         # customize parameters
         assert self.args.init == 'normal'
         assert self.args.alignment_module == 'swapping'
@@ -205,7 +205,6 @@ class BootEA(BasicModel):
         assert self.args.truncated_epsilon > 0.0
         assert self.args.learning_rate >= 0.01
 
-
     def define_embed_graph(self, data):
         ph = data['pos_hs']
         pr = data['pos_rs']
@@ -214,18 +213,20 @@ class BootEA(BasicModel):
         nr = data['neg_rs']
         nt = data['neg_ts']
         batch_size_now = ph.shape[0]
-        '''ph = F.normalize(self.ent_embeds(ph), 2, -1)
+        ph = F.normalize(self.ent_embeds(ph), 2, -1)
         pr = F.normalize(self.rel_embeds(pr), 2, -1)
         pt = F.normalize(self.ent_embeds(pt), 2, -1)
         nh = F.normalize(self.ent_embeds(nh), 2, -1)
         nr = F.normalize(self.rel_embeds(nr), 2, -1)
-        nt = F.normalize(self.ent_embeds(nt), 2, -1)'''
+        nt = F.normalize(self.ent_embeds(nt), 2, -1)
+        """
         ph = self.ent_embeds(ph)
         pr = self.rel_embeds(pr)
         pt = self.ent_embeds(pt)
         nh = self.ent_embeds(nh)
         nr = self.rel_embeds(nr)
         nt = self.ent_embeds(nt)
+        """
         if self.args.loss_norm == "L2":
             pos = torch.pow(torch.norm(ph + pr - pt, 2, -1), 2)
             neg = torch.pow(torch.norm(nh + nr - nt, 2, -1), 2)
@@ -239,56 +240,56 @@ class BootEA(BasicModel):
         loss = pos_loss + self.args.neg_margin_balance * neg_loss
         return loss
 
-
     def define_alignment_graph(self, data):
         new_h = data['new_h']
         new_r = data['new_r']
         new_t = data['new_t']
-        '''phs = F.normalize(self.ent_embeds(new_h), 2, -1)
+        phs = F.normalize(self.ent_embeds(new_h), 2, -1)
         prs = F.normalize(self.rel_embeds(new_r), 2, -1)
-        pts = F.normalize(self.ent_embeds(new_t), 2, -1)'''
+        pts = F.normalize(self.ent_embeds(new_t), 2, -1)
+        """
         phs = self.ent_embeds(new_h)
         prs = self.rel_embeds(new_r)
         pts = self.ent_embeds(new_t)
+        """
         return - torch.sum(torch.log(torch.sigmoid(-torch.pow(torch.norm(phs + prs - pts, 2, -1), 2))))
-
 
     def define_likelihood_graph(self, data):
         entities1 = data['entities1']
         entities2 = data['entities2']
         likelihood_mat = data['likelihood_mat']
-        '''ent1_embed = F.normalize(self.ent_embeds(entities1), 2, -1)
-        ent2_embed = F.normalize(self.ent_embeds(entities2), 2, -1)'''
+        ent1_embed = F.normalize(self.ent_embeds(entities1), 2, -1)
+        ent2_embed = F.normalize(self.ent_embeds(entities2), 2, -1)
+        """
         ent1_embed = self.ent_embeds(entities1)
         ent2_embed = self.ent_embeds(entities2)
+        """
         mat = torch.log(torch.sigmoid(torch.matmul(ent1_embed, ent2_embed.T)))
         likelihood_loss = -torch.sum(torch.multiply(mat, likelihood_mat))
         return likelihood_loss
-
 
     def eval_ref_sim_mat(self):
         refs1_embeddings = F.normalize(self.ent_embeds(to_tensor(self.ref_ent1, self.device)), 2, -1)
         refs2_embeddings = F.normalize(self.ent_embeds(to_tensor(self.ref_ent2, self.device)), 2, -1)
         return torch.matmul(refs1_embeddings, refs2_embeddings.T).cpu().detach()
 
-
     def eval_kg1_useful_ent_embeddings(self):
         embeds = self.ent_embeds(to_tensor(self.kgs.useful_entities_list1, self.device)).cpu().detach().numpy()
         # embeds = self.ent_embeds(to_tensor(self.kgs.useful_entities_list1)).detach()
         return embeds
-
 
     def eval_kg2_useful_ent_embeddings(self):
         embeds = self.ent_embeds(to_tensor(self.kgs.useful_entities_list2, self.device)).cpu().detach().numpy()
         # embeds = self.ent_embeds(to_tensor(self.kgs.useful_entities_list2)).detach()
         return embeds
 
-
     def test(self, entities1, entities2):
-        '''seed_entity1 = F.normalize(self.ent_embeds(to_tensor(entities1)), 2, -1)
-        seed_entity2 = F.normalize(self.ent_embeds(to_tensor(entities2)), 2, -1)'''
+        seed_entity1 = F.normalize(self.ent_embeds(to_tensor(entities1, self.device)), 2, -1)
+        seed_entity2 = F.normalize(self.ent_embeds(to_tensor(entities2, self.device)), 2, -1)
+        """
         seed_entity1 = self.ent_embeds(to_tensor(entities1, self.device))
         seed_entity2 = self.ent_embeds(to_tensor(entities2, self.device))
+        """
         _, _, _, sim_list = test(seed_entity1.cpu().detach().numpy(), seed_entity2.cpu().detach().numpy(), None,
                                  self.args.top_k, self.args.test_threads_num, metric=self.args.eval_metric,
                                  normalize=self.args.eval_norm,
@@ -296,13 +297,15 @@ class BootEA(BasicModel):
         print()
         return sim_list
 
-
     def valid(self, stop_metric):
         if len(self.kgs.valid_links) > 0:
-            '''seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1)), 2, -1)
-            seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities2)), 2, -1)'''
+            seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device)), 2, -1)
+            seed_entity2 = F.normalize(
+                self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device)), 2, -1)
+            """
             seed_entity1 = self.ent_embeds(to_tensor(self.kgs.valid_entities1, self.device))
             seed_entity2 = self.ent_embeds(to_tensor(self.kgs.valid_entities2 + self.kgs.test_entities2, self.device))
+            """
         else:
             '''seed_entity1 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities1)), 2, -1)
             seed_entity2 = F.normalize(self.ent_embeds(to_tensor(self.kgs.test_entities2)), 2, -1)'''
@@ -312,6 +315,8 @@ class BootEA(BasicModel):
                                  self.args.top_k, self.args.test_threads_num, metric=self.args.eval_metric,
                                  normalize=self.args.eval_norm, csls_k=0, accurate=False)
         return hits1_12 if stop_metric == 'hits1' else mrr_12
+
+
 """
 def bootstrapping(sim_mat, unaligned_entities1, unaligned_entities2, labeled_alignment, sim_th, k):
     curr_labeled_alignment = find_potential_alignment_mwgm(sim_mat, sim_th, k)

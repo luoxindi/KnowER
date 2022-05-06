@@ -1,10 +1,12 @@
 import numpy as np
 import tensorflow._api.v2.compat.v1 as tf
+
+from src.py.base.optimizers import generate_optimizer_tf
+
 tf.disable_eager_execution()  #关闭eager运算
 
 from src.py.base.initializers import orthogonal_init
 from src.py.base.losses import mapping_loss_tf
-from src.py.util.util import generate_optimizer
 
 
 def add_mapping_module(model):
@@ -16,7 +18,7 @@ def add_mapping_module(model):
         tes2 = tf.nn.embedding_lookup(model.ent_embeds, model.seed_entities2)
     with tf.name_scope('mapping_loss'):
         model.mapping_loss = model.args.alpha * mapping_loss_tf(tes1, tes2, model.mapping_mat, model.eye_mat)
-        model.mapping_optimizer = generate_optimizer(model.mapping_loss, model.args.learning_rate,
+        model.mapping_optimizer = generate_optimizer_tf(model.mapping_loss, model.args.learning_rate,
                                                      opt=model.args.optimizer)
 
 

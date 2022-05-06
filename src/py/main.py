@@ -5,7 +5,7 @@ curPath = os.path.abspath(os.path.dirname(__file__))
 rootPath = os.path.split(curPath)[0]
 print(rootPath)
 sys.path.append(rootPath)
-sys.path.append('/data1/xdluo/Knower')
+#sys.path.append('/data1/xdluo/Knower')
 from src.py.args_handler import load_args
 from src.py.load.kgs import read_kgs_from_folder
 from src.py.model.general_models import kge_models, ea_models, et_models
@@ -15,14 +15,14 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 if __name__ == '__main__':
     t = time.time()
     curPath = os.path.abspath(os.path.dirname(__file__))
-    model_name = 'transh'
-    kg_task = 'lp'
+    model_name = 'iptranse'
+    kg_task = 'ea'
     if kg_task == 'ea':
-        args = load_args(curPath + "/args_ea/" + model_name + r"_args_15K.json")
+        args = load_args(curPath + "/args_ea/" + model_name + r"_args.json")
     elif kg_task == 'lp':
         args = load_args(curPath + "/args_kge/" + model_name + r"_args.json")
     else:
-        args = load_args(curPath + "/args_et/" + model_name + r"_args.json")
+        args = load_args(curPath + "/args_et/" + model_name + r"_et_args.json")
 
     # args.training_data = "../OpenEA_dataset_v1.1/EN_DE_15K_V1/"
     # args.word_embed = 'D:/wiki-news-300d-1M.vec'
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         model = kge_models(args, kgs)
     else:
         model = et_models(args, kgs)
-    model.get_model('TransH')
+    model.get_model('IPtransE')
     model.run()
     model.test()
     print("Total run time = {:.3f} s.".format(time.time() - t))

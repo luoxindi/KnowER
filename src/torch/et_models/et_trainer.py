@@ -49,15 +49,12 @@ class et_trainer:
         self.kgs = kgs
         self.model = model
         if self.args.is_gpu:
-            torch.cuda.set_device(1)
+            #torch.cuda.set_device(1)
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             # self.device = torch.device('cuda:2')
         else:
             self.device = torch.device('cpu')
         self.model.to(self.device)
-        device_ids = [0, 1]
-        # self.model = torch.nn.DataParallel(self.model, device_ids=device_ids)
-        # print(self.model.parameters())
         self.valid = EntityTypeEvaluator(model, args, kgs, is_valid=True)
         self.optimizer = get_optimizer_torch(self.args.optimizer, self.model, self.args.learning_rate)
 
@@ -80,11 +77,12 @@ class et_trainer:
             for j in range(triple_steps):
                 self.optimizer.zero_grad()
                 links_batch = random.sample(self.kgs.train_et_list, len(self.kgs.train_et_list) // triple_steps)
-                neg_type = np.random.choice(self.kgs.type_list, len(self.kgs.train_et_list) // triple_steps)
                 length += len(links_batch)
                 batch_h = [x[0] for x in links_batch]
-                links_batch_neg = zip(batch_h, neg_type)
-                links_batch += links_batch_neg
+                for k in range(self.args.neg_triple_num):
+                  neg_type = np.random.choice(self.kgs.type_list, len(self.kgs.train_et_list) // triple_steps)
+                  links_batch_neg = zip(batch_h, neg_type)
+                  links_batch += links_batch_neg
                 # batch_pos = np.array(batch_pos)
                 # batch_neg = np.array(batch_neg)
                 r = [0 for x in range(len(links_batch))]
@@ -95,7 +93,7 @@ class et_trainer:
                     'batch_t': to_var(np.array([x[1] for x in links_batch]), self.device)
                 }
                 score = self.model(data)
-                self.batch_size = int(len(links_batch)/2)
+                self.batch_size = int(len(links_batch)/(self.args.neg_triple_num + 1))
                 po_score = self.get_pos_score(score)
                 ne_score = self.get_neg_score(score)
                 loss = get_loss_func_torch(po_score, ne_score, self.args)

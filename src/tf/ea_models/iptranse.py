@@ -321,3 +321,4 @@ class IPTransE(BasicModel):
             if epoch % self.args.bp_freq == 0:
                 self.launch_alignment_training_1epo(epoch)
         print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
+        self.save()

@@ -25,6 +25,7 @@ def parse_types(relation_set):
 # 将一个三元组转为id，存储一个kg所需的各种数据
 class KG:
     def __init__(self, relation_triples, attribute_triples):
+        self.type_dict = None
         self.r_dict = None
         self.h_dict = None
         self.t_dict = None
@@ -203,6 +204,13 @@ class KG:
         print("entity type num:", self.type_num)
         self.valid_et_ent, self.valid_et_type = parse_types_list(self.valid_et_list)
         self.test_et_ent, self.test_et_type = parse_types_list(self.test_et_list)
+        self.type_dict = dict()
+        for h, t in self.train_et_list:
+            type_set = self.type_dict.get((h, 0), set())
+            type_set.add(t)
+            self.type_dict[(h, 0)] = type_set
+
+        print("Number of type_dict:", len(self.type_dict))
 
     def set_id_dict(self, entities_id_dict, relations_id_dict, attributes_id_dict):
         self.entities_id_dict = entities_id_dict

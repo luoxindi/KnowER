@@ -115,7 +115,7 @@ class Attr2Vec:
     def _define_embed_graph(self):
         with tf.name_scope('attribute_placeholder'):
             self.train_inputs = tf.placeholder(tf.int32, shape=[self.args.batch_size])
-            self.train_labels = tf.placeholder(tf.int32, shape=[self.args.batch_size])
+            self.train_labels = tf.placeholder(tf.int32, shape=[self.args.batch_size, 1])
         with tf.name_scope('attribute_lookup'):
             self.train_inputs_embed = tf.nn.embedding_lookup(self.embeds, self.train_inputs)
         with tf.name_scope('attribute_nce_loss'):
@@ -148,6 +148,7 @@ class Attr2Vec:
         start = time.time()
         epoch_loss = 0
         trained_pos_triples = 0
+        #graph = tf.get_default_graph()
         for i in range(steps):
             training_batch = random.sample(training_data_list, self.args.batch_size)
             batch = np.ndarray(shape=(self.args.batch_size,), dtype=np.int32)
@@ -155,6 +156,7 @@ class Attr2Vec:
             for index, x in enumerate(training_batch):
                 batch[index] = x[0]
                 labels[index, 0] = x[1]
+            #loss = tf.summary.scalar('loss', self.loss)
             batch_loss, _ = self.session.run(fetches=[self.loss, self.optimizer],
                                              feed_dict={self.train_inputs: batch,
                                                         self.train_labels: labels})
