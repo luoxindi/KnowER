@@ -42,9 +42,6 @@ class TransE(BasicModel):
 		#self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)
 
 	def calc(self, h, r, t):
-		h = F.normalize(h, 2, -1)
-		#r = F.normalize(r, 2, -1)
-		t = F.normalize(t, 2, -1)
 		score = (h + r) - t
 		#score = torch.pow(torch.norm(score, self.p_norm, -1), 2)
 		score = torch.norm(score, self.p_norm, -1)

@@ -363,27 +363,3 @@ class PyTorchTrainKE(Dataset):
             neg_list.append(neg_tmp)
             neg_cur_size += len(neg_tmp)
         return np.concatenate(neg_list)[:neg_size]
-
-    def set_sampling_mode(self, sampling_mode):
-        self.sampling_mode = sampling_mode
-
-    def set_ent_neg_rate(self, rate):
-        self.neg_ent = rate
-
-    def set_rel_neg_rate(self, rate):
-        self.neg_rel = rate
-
-    def set_bern_flag(self, bern_flag):
-        self.bern_flag = bern_flag
-
-    def set_filter_flag(self, filter_flag):
-        self.filter_flag = filter_flag
-
-    def get_ent_tot(self):
-        return self.ent_total
-
-    def get_rel_tot(self):
-        return self.rel_total
-
-    def get_tri_tot(self):
-        return self.tri_total
