@@ -198,7 +198,7 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 | FB15K237      | 14541    | 237       | 272115  | 17535 | 20466   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
 | WN18RR        | 40943    | 11        | 86835   | 3034  | 3134    | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/) |
 | WN18          | 40943    | 18        | 141442  | 5000  | 5000    | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)     |
-| WN11          | 38588    | 11        | 112581  | 2609  | 10544   | dbPEDIA                                                      |
+| WN11          | 38588    | 11        | 112581  | 2609  | 10544   |                                                      |
 | DBpedia50     | 49900    | 654       | 23288   | 399   | 10969   | [Shi *et al*., 2017](https://arxiv.org/abs/1711.03438)       |
 | DBpedia500    | 517475   | 654       | 3102677 | 10000 | 1155937 |                                                              |
 | Countries     | 271      | 2         | 1111    | 24    | 24      | [Bouchard *et al*., 2015](https://www.aaai.org/ocs/index.php/SSS/SSS15/paper/view/10257/10026) |
@@ -218,7 +218,7 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 
 | Datasets name | Entities | Relations | Triples | Types | Citation                                                     |
 | ------------- | -------- | --------- | ------- | ----- | ------------------------------------------------------------ |
-| FB15K-ET      | 15000    | 248       | 38265   |       | [Moon *et al*., 2017]([Learning Entity Type Embeddings for Knowledge Graph Completion (persagen.com)](https://persagen.com/files/misc/Moon2017Learning.pdf)) |
+| FB15K-ET      | 15000    | 248       | 38265   |       | [Moon *et al*., 2017](https://persagen.com/files/misc/Moon2017Learning.pdf) |
 
 
 
