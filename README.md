@@ -1,17 +1,39 @@
-<img src="C:\Users\xdluo\AppData\Roaming\Typora\typora-user-images\image-20220427230733905.png" alt="image-20220427230733905" style="zoom:20%;" />
+<img src="C:\Users\xdluo\AppData\Roaming\Typora\typora-user-images\image-20220507232752092.png" alt="image-20220507232752092" style="zoom:33%;" />
 
 <h1 align="center">
-  KnowER
+  muKG
 </h1>
 
-<p align="center">
-    <b>muKG:</b> <b></b>  muKG is a library for multi-source <b>knowledge
-        graph embedding and reasoning</b>. It supports multiple deep learning libraries (PyTorch and TensorFlow 2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction. 
-</p>
+muKG:  muKG is an open-source Python library for representation learning over knowledge graphs. muKG supports joint representation learning over multi-source knowledge graphs (and also a single knowledge graph), multiple deep learning libraries (PyTorch and TF2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction), and multiple parallel computing modes (multi-process and multi-GPU computing).
 
 
 
-## Introduction of muKG
+## Table of contents
+
+1. [Introduction of muKG 📃](#Introduction of muKG)
+   1. [Overview](#overview)
+   2. [Package Description](#package-description)
+2. [Getting Started 🚀](#getting-started)
+   1. [Dependencies](#dependencies)
+   2. [Installation](#installation)
+   3. [Usage](#usage)
+3. [Models hub 🏠](#models-hub)
+   1. [KGE models](#kge-models)
+   2. [EA models](#ea-models)
+   3. [ET models](#et-models)
+4. [Datasets hub 🏠](#datasets-hub)
+   1. [KGE datasets](#kge-datasets)
+   2. [EA datasets](#ea-datasets)
+   3. [ET datasets](#et-datasets)
+5. [Utils📂](#utils)
+   1. [Sampler](#sampler)
+   2. [Evaluator](#evaluator)
+   3. [ET datasets](#et-datasets)
+   4. [Multi-GPU and multi-processing computation](#multi-gpu-and-multi-processing-computation)
+6. [License](#license)
+7. [Citation](#citation)
+
+## Introduction of muKG 📃
 
 ### Overview 
 
@@ -70,11 +92,10 @@ muKG supports PyTorch and TensorFlow 2 deep learning libraries, users can choose
 
 ### Installation 🔧
 
-We suggest you create a new conda environment firstly.  We provide two installation instructions for tensorflow-gpu (tested on 1.2.1) and pytorch (tested on 1.10.2). Note that there is a difference between the Ray 1.10.0 and Ray 1.12.0 in batch generation module. The Ray 1.10.0 is used as an example.
-
-TensorFlow 2  
+We suggest you create a new conda environment firstly.  We provide two installation instructions for tensorflow-gpu (tested on 1.2.1) and pytorch (tested on 1.10.2). Note that there is a difference between the Ray 1.10.0 and Ray 1.12.0 in batch generation module. The Ray 1.12.0 is used as an example.
 
 ```bash
+# command for Tensorflow
 conda create -n knower python=3.8
 conda activate knower
 conda install tensorflow-gpu==2.3.0
@@ -84,9 +105,8 @@ pip install -U ray==1.12.0
 
 To install PyTorch, you must install [Anaconda](https://www.anaconda.com/) and follow the instructions on the PyTorch website. For example, if you’re using CUDA version 11.3, use the following command:
 
-PyTorch
-
 ```bash
+# command for PyTorch
 conda create -n knower python=3.8
 conda activate knower
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
@@ -101,9 +121,10 @@ git clone https://github.com/luoxindi/KnowER.git KnowER
 cd KnowER
 pip install -e .
 ```
+
 ### Usage 📝
 
-Here we provide tutorials of using command line as well as editing main.py file. The following is an example about how to use muKG in Python.
+Currently, there are two ways to do your job. Here we provide tutorials of using command line as well as editing file to configure your model. The following is an example about how to use muKG in Python. You can choose different tasks, select the specific model and change the mode (training or evaluation) here. The hyperparameter files are stored in the  subfolder `args`. It maintains compelete details for training process.
 
 ```python
 model_name = 'model name'
@@ -121,29 +142,23 @@ elif kg_task == 'lp':
 	model = kge_models(args, kgs)
 else:
 	model = et_models(args, kgs)
-model.get_model('TransE')
+model.get_model('model name')
 model.run()
 model.test()
 ```
 
-You can run a model on a dataset with the following command line:
+To run a model on a dataset with the following command line. We show an example of training TransE on FB15K here. 
 
-```
+```bash
 python main_args.py -t lp -m transe -o train -d data/FB15K
 ```
 
-You can also use the following command line to train your model with multi-GPU and multi-processing.
-
-```bash
-python main_args.py -t lp -m transe -o train -d data/FB15K -r gpu:2 -w 2  
-```
 
 
 
 ## Models hub 🏠
 
-muKG has implemented 26 KG models. The citation for each models corresponds to either the paper
-describing the model. It is available for you to add your own model to muKG.
+muKG has implemented 26 KG models. The citation for each models corresponds to either the paper describing the model. According to different knowledge graph downstream tasks, we divided the models into three categories. It is available for you to add your own models under one of the three folders.
 
 ### KGE models
 
@@ -188,7 +203,7 @@ describing the model. It is available for you to add your own model to muKG.
 
 ## Datasets hub 🏠
 
-muKG has bulit in 16 KG datasets for different downstream tasks. Here we list the number of entities, relations, train triples, valid triples and test triples for these datasets. You can prepare your own datasets in the Datasets hub.
+muKG has bulit in 16 KG datasets for different downstream tasks. Here we list the number of entities, relations, train triples, valid triples and test triples for these datasets. You can prepare your own datasets in the Datasets hub. Firstly, you should create a subfolder `dataset name` in the `data` folder, then put your train.txt, valid.txt and test.txt files in this folder. The data should be in the triple format.
 
 ### KGE datasets
 
@@ -198,14 +213,14 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 | FB15K237      | 14541    | 237       | 272115  | 17535 | 20466   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
 | WN18RR        | 40943    | 11        | 86835   | 3034  | 3134    | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/) |
 | WN18          | 40943    | 18        | 141442  | 5000  | 5000    | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)     |
-| WN11          | 38588    | 11        | 112581  | 2609  | 10544   |                                                      |
+| WN11          | 38588    | 11        | 112581  | 2609  | 10544   |                                                              |
 | DBpedia50     | 49900    | 654       | 23288   | 399   | 10969   | [Shi *et al*., 2017](https://arxiv.org/abs/1711.03438)       |
 | DBpedia500    | 517475   | 654       | 3102677 | 10000 | 1155937 |                                                              |
 | Countries     | 271      | 2         | 1111    | 24    | 24      | [Bouchard *et al*., 2015](https://www.aaai.org/ocs/index.php/SSS/SSS15/paper/view/10257/10026) |
 | FB13          | 75043    | 13        | 316232  | 5908  | 23733   |                                                              |
 | Kinsip        | 104      | 25        | 8544    | 1086  | 1074    | [Kemp *et al*., 2006](https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf) |
 | Nations       | 14       | 55        | 1592    | 199   | 201     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets) |
-| NELL-995      | 75492    | 200       | 149678  | 543   | 3992    |                                                              |
+| NELL-995      | 75492    | 200       | 149678  | 543   | 3992    | [Nathani *et al*., 2019](https://arxiv.org/abs/1906.01195)   |
 | UMLS          | 75492    | 135       | 5216    | 652   | 661     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets) |
 
 ### EA datasets
@@ -218,7 +233,8 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 
 | Datasets name | Entities | Relations | Triples | Types | Citation                                                     |
 | ------------- | -------- | --------- | ------- | ----- | ------------------------------------------------------------ |
-| FB15K-ET      | 15000    | 248       | 38265   |       | [Moon *et al*., 2017](https://persagen.com/files/misc/Moon2017Learning.pdf) |
+| FB15K-ET      | 15000    | 248       | 38265   | 3851  | [Moon *et al*., 2017](https://persagen.com/files/misc/Moon2017Learning.pdf) |
+
 
 
 
@@ -230,28 +246,39 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 
 muKG includes several negative sampling methods to randomly generate negative examples.
 
-- **Uniform negative sampling**
-- **Self-adversarial negative sampling** 
-- **Truncated negative sampling** 
+- Uniform negative sampling:  This method replaces an entity in a triple or an alignment pair with another randomly-sampled entity to generate a negative example. It gives each entity the same replacement probability.
+- Self-adversarial negative sampling: This method samples negative triples according to the current embedding model.
+- Truncated negative sampling: This method seeks to generate hard negative examples.
 
 **Path sampler:**
-The Path sampler is to support some embedding models that are built by modeling the paths of KGs, such as IPTransE and RSN4EA. It can generate relational path like (e_1, r_1, e_2, r_2, e_3), entity path like (e_1, e_2, e_3), and relation path like (r_1, r_2).
+The Path sampler is to support some embedding models that are built by modeling the paths of KGs, such as IPTransE and RSN4EA. It can generate relational path like ***(e_1, r_1, e_2, r_2, e_3)***, entity path like ***(e_1, e_2, e_3)***, and relation path like*** (r_1, r_2)***.
 
 **Subgraph sampler:**
-
 The subgraph sampler is to support GNN-based embedding models like GCN-Align and AliNet. It can generate both first-order (i.e., one-hop) and high-order (i.e., multi-hop) neighborhood subgraphs of entities.
 
+### Evaluator
+
+**(joint) link prediction & entity typing:** It uses the energy function to compute the plausibility of a candidate triple. The implemented metrics for assessing the performance of embedding tasks include Hits@K, mean rank (MR) and mean reciprocal rank (MRR). The hyperparameter json file stored in `args` subfolder allows you to set Hits@K.
+
+**entity alignment**: It provides several metrics to measure entity embedding similarities, such as the cosine, inner, Euclidean distance, and cross-domain similarity local scaling. The evaluation process can be accelerated using multiprocessing. 
 ### Multi-GPU and multi-processing computation
 
 We use [Ray](https://www.ray.io/) to provide a uniform and easy-to-use interface for multi-GPU and multi-processing computation. The following figure shows our Ray-based implementation for parallel computing and the code snippet to use it. Users can set the number of CPUs or GPUs used for model training.
 
 ![image-20220507172436866](C:\Users\xdluo\Desktop\Knowsys\resources\image-20220507172436866.png)
 
-You can use the following command line to train your model with multi-GPU and multi-processing.
+To use the following command line to train your model with multi-GPU and multi-processing. Firstly check the number of resources on your machine (GPU or CPU), and then specify the number of parallels. The system will automatically allocate resources for each worker working in parallel. 
 
 ```bash
+# When you run on one or more GPUs, use os.environ['CUDA_VISIBLE_DEVICES'] to set GPU id list first 
 python main_args.py -t lp -m transe -o train -d data/FB15K -r gpu:2 -w 2  
 ```
+
+## License
+
+This project is licensed under the GPL License - see the [LICENSE](LICENSE) file for details
+
+## Citation
 
 
 
