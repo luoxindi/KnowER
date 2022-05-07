@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
+from src.py.load.kg import parse_triples
 from src.py.util.util import to_tensor_cpu
 
 
@@ -180,3 +181,209 @@ class PyTorchTrainDataLoader(DataLoader):
 
     def get_triple_tot(self):
         return self.dataset.get_tri_tot()
+
+
+def parse_triples_list(relation_set):
+    subjects, predicates, objects = list(), list(), list()
+    for o, p, s in relation_set:
+        objects.append(o)
+        predicates.append(p)
+        subjects.append(s)
+    return objects, predicates, subjects
+
+class PyTorchTrainKE(Dataset):
+
+    def __init__(self, args, kgs):
+        # triples
+        self.args = args
+        self.kgs = kgs
+        self.head, self.rel, self.tail = parse_triples_list(self.kgs.relation_triples_set)
+        # total numbers of entities, relations, and triples
+        self.rel_total = self.kgs.relations_num
+        self.ent_total = self.kgs.entities_num
+        self.tri_total = len(self.head)
+        # the sampling mode
+        # the number of negative examples
+        self.neg_ent = self.args.neg_triple_num
+        self.neg_rel = 0
+        self.bern_flag = True
+        self.cross_sampling_flag = None
+        self.filter_flag = True
+        self.__count_htr()
+
+    def __len__(self):
+        return self.tri_total
+
+    def __getitem__(self, idx):
+        return self.head[idx], self.tail[idx], self.rel[idx]
+
+    def collate_fn(self, data):
+        batch_data = {}
+        h = np.array([item[0] for item in data])
+        t = np.array([item[1] for item in data])
+        r = np.array([item[2] for item in data])
+        batch_h = np.repeat(h.reshape(-1, 1), self.neg_ent + self.neg_rel, axis=-1)
+        batch_t = np.repeat(t.reshape(-1, 1), self.neg_ent + self.neg_rel, axis=-1)
+        batch_r = np.repeat(r.reshape(-1, 1), self.neg_ent + self.neg_rel, axis=-1)
+        for index, item in enumerate(data):
+            last = 0
+            if self.neg_ent > 0:
+                neg_head, neg_tail = self.__normal_batch(item[0], item[1], item[2], self.neg_ent)
+                if len(neg_head) > 0:
+                    batch_h[index][last:last + len(neg_head)] = neg_head
+                    last += len(neg_head)
+                if len(neg_tail) > 0:
+                    batch_t[index][last:last + len(neg_tail)] = neg_tail
+                    last += len(neg_tail)
+        batch_h = np.concatenate((h, batch_h.reshape(-1)), 0)
+        batch_r = np.concatenate((r, batch_r.reshape(-1)), 0)
+        batch_t = np.concatenate((t, batch_t.reshape(-1)), 0)
+        batch_h = to_tensor_cpu(batch_h)
+        batch_t = to_tensor_cpu(batch_t)
+        batch_r = to_tensor_cpu(batch_r)
+
+        batch_data = []
+        batch_data.append(batch_h.squeeze())
+        batch_data.append(batch_r.squeeze())
+        batch_data.append(batch_t.squeeze())
+        return batch_data
+
+    def __count_htr(self):
+
+        self.h_of_rt = self.kgs.h_dict
+        self.t_of_hr = self.kgs.t_dict
+        self.r_of_ht = self.kgs.r_dict
+        self.h_of_r = {}
+        self.t_of_r = {}
+        self.freqRel = {}
+        self.lef_mean = {}
+        self.rig_mean = {}
+
+        triples = zip(self.head, self.rel, self.tail)
+        for h, r, t in triples:
+            if r not in self.freqRel:
+                self.freqRel[r] = 0
+                self.h_of_r[r] = {}
+                self.t_of_r[r] = {}
+            self.freqRel[r] += 1.0
+            self.h_of_r[r][h] = 1
+            self.t_of_r[r][t] = 1
+
+        for r, t in self.h_of_rt:
+            self.h_of_rt[(r, t)] = np.array(list(set(self.h_of_rt[(r, t)])))
+        for h, r in self.t_of_hr:
+            self.t_of_hr[(h, r)] = np.array(list(set(self.t_of_hr[(h, r)])))
+        for h, t in self.r_of_ht:
+            self.r_of_ht[(h, t)] = np.array(list(set(self.r_of_ht[(h, t)])))
+        for r in range(self.rel_total):
+            self.h_of_r[r] = np.array(list(self.h_of_r[r].keys()))
+            self.t_of_r[r] = np.array(list(self.t_of_r[r].keys()))
+            self.lef_mean[r] = self.freqRel[r] / len(self.h_of_r[r])
+            self.rig_mean[r] = self.freqRel[r] / len(self.t_of_r[r])
+
+    def __corrupt_head(self, t, r, num_max=1):
+        tmp = torch.randint(low=0, high=self.ent_total, size=(num_max,)).numpy()
+        if not self.filter_flag:
+            return tmp
+        mask = np.in1d(tmp, self.h_of_rt[(r, t)], assume_unique=True, invert=True)
+        neg = tmp[mask]
+        return neg
+
+    def __corrupt_tail(self, h, r, num_max=1):
+        tmp = torch.randint(low=0, high=self.ent_total, size=(num_max,)).numpy()
+        if not self.filter_flag:
+            return tmp
+        mask = np.in1d(tmp, self.t_of_hr[(h, r)], assume_unique=True, invert=True)
+        neg = tmp[mask]
+        return neg
+
+    def __corrupt_rel(self, h, t, num_max=1):
+        tmp = torch.randint(low=0, high=self.rel_total, size=(num_max,)).numpy()
+        if not self.filter_flag:
+            return tmp
+        mask = np.in1d(tmp, self.r_of_ht[(h, t)], assume_unique=True, invert=True)
+        neg = tmp[mask]
+        return neg
+
+    def __normal_batch(self, h, t, r, neg_size):
+        neg_size_h = 0
+        neg_size_t = 0
+        prob = self.rig_mean[r] / (self.rig_mean[r] + self.lef_mean[r]) if self.bern_flag else 0.5
+        for i in range(neg_size):
+            if random.random() < prob:
+                neg_size_h += 1
+            else:
+                neg_size_t += 1
+
+        neg_list_h = []
+        neg_cur_size = 0
+        while neg_cur_size < neg_size_h:
+            neg_tmp_h = self.__corrupt_head(t, r, num_max=(neg_size_h - neg_cur_size) * 2)
+            neg_list_h.append(neg_tmp_h)
+            neg_cur_size += len(neg_tmp_h)
+        if neg_list_h != []:
+            neg_list_h = np.concatenate(neg_list_h)
+
+        neg_list_t = []
+        neg_cur_size = 0
+        while neg_cur_size < neg_size_t:
+            neg_tmp_t = self.__corrupt_tail(h, r, num_max=(neg_size_t - neg_cur_size) * 2)
+            neg_list_t.append(neg_tmp_t)
+            neg_cur_size += len(neg_tmp_t)
+        if neg_list_t != []:
+            neg_list_t = np.concatenate(neg_list_t)
+
+        return neg_list_h[:neg_size_h], neg_list_t[:neg_size_t]
+
+    def __head_batch(self, h, t, r, neg_size):
+        # return torch.randint(low = 0, high = self.ent_total, size = (neg_size, )).numpy()
+        neg_list = []
+        neg_cur_size = 0
+        while neg_cur_size < neg_size:
+            neg_tmp = self.__corrupt_head(t, r, num_max=(neg_size - neg_cur_size) * 2)
+            neg_list.append(neg_tmp)
+            neg_cur_size += len(neg_tmp)
+        return np.concatenate(neg_list)[:neg_size]
+
+    def __tail_batch(self, h, t, r, neg_size):
+        # return torch.randint(low = 0, high = self.ent_total, size = (neg_size, )).numpy()
+        neg_list = []
+        neg_cur_size = 0
+        while neg_cur_size < neg_size:
+            neg_tmp = self.__corrupt_tail(h, r, num_max=(neg_size - neg_cur_size) * 2)
+            neg_list.append(neg_tmp)
+            neg_cur_size += len(neg_tmp)
+        return np.concatenate(neg_list)[:neg_size]
+
+    def __rel_batch(self, h, t, r, neg_size):
+        neg_list = []
+        neg_cur_size = 0
+        while neg_cur_size < neg_size:
+            neg_tmp = self.__corrupt_rel(h, t, num_max=(neg_size - neg_cur_size) * 2)
+            neg_list.append(neg_tmp)
+            neg_cur_size += len(neg_tmp)
+        return np.concatenate(neg_list)[:neg_size]
+
+    def set_sampling_mode(self, sampling_mode):
+        self.sampling_mode = sampling_mode
+
+    def set_ent_neg_rate(self, rate):
+        self.neg_ent = rate
+
+    def set_rel_neg_rate(self, rate):
+        self.neg_rel = rate
+
+    def set_bern_flag(self, bern_flag):
+        self.bern_flag = bern_flag
+
+    def set_filter_flag(self, filter_flag):
+        self.filter_flag = filter_flag
+
+    def get_ent_tot(self):
+        return self.ent_total
+
+    def get_rel_tot(self):
+        return self.rel_total
+
+    def get_tri_tot(self):
+        return self.tri_total

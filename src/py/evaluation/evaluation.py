@@ -517,7 +517,7 @@ class LinkPredictionEvaluator:
         if self.args.test_tail:
             self.evaluate_t()
         else:
-            self.evaluated()
+            self.evaluate()
         if k is None:
             k = self.args.top_k
         if self.args.test_tail:

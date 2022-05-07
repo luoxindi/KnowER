@@ -20,9 +20,8 @@ class TransE(BasicModel):
 		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
 
-		nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-		nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-		"""
+		#nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
+		#nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
 		self.margin = nn.Parameter(torch.Tensor([margin]))
 		self.margin.requires_grad = False
 		self.margin_flag = False
@@ -35,14 +34,12 @@ class TransE(BasicModel):
 			torch.Tensor([(self.margin.item() + self.epsilon) / self.dim]),
 			requires_grad=False
 		)
-
 		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
 		nn.init.uniform_(tensor=self.ent_embeddings.weight.data, a=-self.embedding_range.item(), b=self.embedding_range.item())
 		nn.init.uniform_(tensor=self.rel_embeddings.weight.data, a=-self.embedding_range.item(), b=self.embedding_range.item())
-		"""
-		self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
-		self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)
+		#self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
+		#self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)
 
 	def calc(self, h, r, t):
 		h = F.normalize(h, 2, -1)

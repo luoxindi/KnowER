@@ -16,8 +16,12 @@ class RESCAL(BasicModel):
         self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
         self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim * self.dim)
         # self.low_values = False
-        nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+        if self.args.init == 'xavier':
+            nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
+            nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+        else:
+            nn.init.xavier_normal_(self.ent_embeddings.weight.data)
+            nn.init.xavier_normal_(self.rel_embeddings.weight.data)
         # self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
 
     def calc(self, h, t, r):

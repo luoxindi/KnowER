@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 from .basic_model import BasicModel
@@ -17,28 +19,31 @@ class DistMult(BasicModel):
 		self.low_values = False
 		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
-
-		if margin == None or epsilon == None:
+		if self.args.init == 'xavier':
 			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
 			nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-		else:
+		elif self.args.init == 'normal':
+			std = 1.0 / math.sqrt(self.args.dim)
+			nn.init.normal_(self.ent_embeddings.weight.data, 0, std)
+			nn.init.normal_(self.rel_embeddings.weight.data, 0, std)
+		elif self.args.init == 'uniform':
 			self.embedding_range = nn.Parameter(
 				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
 			)
 			nn.init.uniform_(
-				tensor = self.ent_embeddings.weight.data, 
-				a = -self.embedding_range.item(), 
-				b = self.embedding_range.item()
+				tensor=self.ent_embeddings.weight.data,
+				a=-self.embedding_range.item(),
+				b=self.embedding_range.item()
 			)
 			nn.init.uniform_(
-				tensor = self.rel_embeddings.weight.data, 
-				a= -self.embedding_range.item(), 
-				b= self.embedding_range.item()
+				tensor=self.rel_embeddings.weight.data,
+				a=-self.embedding_range.item(),
+				b=self.embedding_range.item()
 			)
 		self.ent_embeddings.weight.data = F.normalize(self.ent_embeddings.weight.data, 2, -1)
 		self.rel_embeddings.weight.data = F.normalize(self.rel_embeddings.weight.data, 2, -1)
 
-	def calc(self, h, t, r):
+	def calc(self, h, r, t):
 		score = (h * r) * t
 		score = torch.sum(score, -1)
 		return score
@@ -51,7 +56,7 @@ class DistMult(BasicModel):
 		h = self.ent_embeddings(batch_h)
 		t = self.ent_embeddings(batch_t)
 		r = self.rel_embeddings(batch_r)
-		score = -self.calc(h, t, r).flatten()
+		score = -self.calc(h, r, t).flatten()
 		return score
 
 	def get_embeddings(self, h_id, r_id, t_id, mode='entities'):
@@ -88,20 +93,3 @@ class DistMult(BasicModel):
 			# this is the relation prediction case
 			hr = (h.view(b_size, 1, self.dim) * r)  # hr has shape (b_size, self.n_rel, self.emb_dim)
 			return -(hr * t.view(b_size, 1, self.dim)).sum(dim=2)
-
-	def regularization(self, data):
-		batch_h = data['batch_h']
-		batch_t = data['batch_t']
-		batch_r = data['batch_r']
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_embeddings(batch_r)
-		regul = (torch.mean(h ** 2) + torch.mean(t ** 2) + torch.mean(r ** 2)) / 3
-		return regul
-
-	def l3_regularization(self):
-		return (self.ent_embeddings.weight.norm(p = 3)**3 + self.rel_embeddings.weight.norm(p = 3)**3)
-
-	def predict(self, data):
-		score = -self.forward(data)
-		return score.cpu().data.numpy()

@@ -15,8 +15,8 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 if __name__ == '__main__':
     t = time.time()
     curPath = os.path.abspath(os.path.dirname(__file__))
-    model_name = 'iptranse'
-    kg_task = 'ea'
+    model_name = 'analogy'
+    kg_task = 'lp'
     if kg_task == 'ea':
         args = load_args(curPath + "/args_ea/" + model_name + r"_args.json")
     elif kg_task == 'lp':
@@ -24,10 +24,6 @@ if __name__ == '__main__':
     else:
         args = load_args(curPath + "/args_et/" + model_name + r"_et_args.json")
 
-    # args.training_data = "../OpenEA_dataset_v1.1/EN_DE_15K_V1/"
-    # args.word_embed = 'D:/wiki-news-300d-1M.vec'
-    # args.word2vec_path = 'D:/wiki-news-300d-1M.vec'
-    # args.dataset_division += '/1/'
     print(args.embedding_module)
     print(args)
     remove_unlinked = False
@@ -39,7 +35,7 @@ if __name__ == '__main__':
         model = kge_models(args, kgs)
     else:
         model = et_models(args, kgs)
-    model.get_model('IPtransE')
+    model.get_model('Analogy')
     model.run()
     model.test()
     print("Total run time = {:.3f} s.".format(time.time() - t))

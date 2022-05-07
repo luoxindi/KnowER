@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,8 +19,12 @@ class ConvE(BasicModel):
         self.loss = torch.nn.BCELoss()
         self.emb_dim1 = self.args.embedding_shape1
         self.emb_dim2 = self.args.dim // self.emb_dim1
-        nn.init.xavier_normal_(self.ent_embeddings.weight.data)
-        nn.init.xavier_normal_(self.rel_embeddings.weight.data)
+        if self.args.init == 'xavier':
+            nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
+            nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+        else:
+            nn.init.xavier_normal_(self.ent_embeddings.weight.data)
+            nn.init.xavier_normal_(self.rel_embeddings.weight.data)
         self.conv1 = torch.nn.Conv2d(1, 32, (3, 3), (1, 1), 0, bias=self.args.use_bias)
         self.bn0 = torch.nn.BatchNorm2d(1)
         self.bn1 = torch.nn.BatchNorm2d(32)

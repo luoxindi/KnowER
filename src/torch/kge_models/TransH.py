@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,32 +35,34 @@ class TransH(BasicModel):
                                                         self.ent_tot,
                                                         self.dim)),
                                             requires_grad=False)
-        nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.norm_vector.weight.data)
-        '''if margin == None or epsilon == None:
+        if self.args.init == 'xavier':
             nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
             nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
-            nn.init.xavier_uniform_(self.norm_vector.weight.data)'''
-        
-        self.embedding_range = nn.Parameter(
-            torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
-        )
-        nn.init.uniform_(
-            tensor=self.ent_embeddings.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-        nn.init.uniform_(
-            tensor=self.rel_embeddings.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-        nn.init.uniform_(
-            tensor=self.norm_vector.weight.data,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
+            nn.init.xavier_uniform_(self.norm_vector.weight.data)
+        elif self.args.init == 'normal':
+            std = 1.0 / math.sqrt(self.args.dim)
+            nn.init.normal_(self.ent_embeds.weight.data, 0, std)
+            nn.init.normal_(self.rel_embeds.weight.data, 0, std)
+            nn.init.normal_(self.norm_vector.weight.data, 0, std)
+        elif self.args.init == 'uniform':
+            self.embedding_range = nn.Parameter(
+                torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
+            )
+            nn.init.uniform_(
+                tensor=self.ent_embeddings.weight.data,
+                a=-self.embedding_range.item(),
+                b=self.embedding_range.item()
+            )
+            nn.init.uniform_(
+                tensor=self.rel_embeddings.weight.data,
+                a=-self.embedding_range.item(),
+                b=self.embedding_range.item()
+            )
+            nn.init.uniform_(
+                tensor=self.norm_vector.weight.data,
+                a=-self.embedding_range.item(),
+                b=self.embedding_range.item()
+            )
 
         '''if margin is not None:
             self.margin = nn.Parameter(torch.Tensor([margin]))

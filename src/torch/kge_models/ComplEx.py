@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 # from .Model import Model
@@ -16,11 +18,17 @@ class ComplEx(BasicModel):
         self.ent_im_embeddings = nn.Embedding(self.ent_tot, self.dim)
         self.rel_re_embeddings = nn.Embedding(self.rel_tot, self.dim)
         self.rel_im_embeddings = nn.Embedding(self.rel_tot, self.dim)
-
-        nn.init.xavier_uniform_(self.ent_re_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.ent_im_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_re_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_im_embeddings.weight.data)
+        if self.args.init == 'xavier':
+            nn.init.xavier_uniform_(self.ent_re_embeddings.weight.data)
+            nn.init.xavier_uniform_(self.ent_im_embeddings.weight.data)
+            nn.init.xavier_uniform_(self.rel_re_embeddings.weight.data)
+            nn.init.xavier_uniform_(self.rel_im_embeddings.weight.data)
+        else:
+            std = 1.0 / math.sqrt(self.args.dim)
+            nn.init.normal_(self.ent_re_embeddings.weight.data, 0, std)
+            nn.init.normal_(self.ent_im_embeddings.weight.data, 0, std)
+            nn.init.normal_(self.rel_re_embeddings.weight.data, 0, std)
+            nn.init.normal_(self.rel_im_embeddings.weight.data, 0, std)
 
     def calc(self, h_re, h_im, t_re, t_im, r_re, r_im):
         return -(h_re * (r_re * t_re + r_im * t_im) + h_im * (
