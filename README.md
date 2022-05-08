@@ -1,4 +1,4 @@
-<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" alt="image-20220507232752092" style="zoom:15%;" />
+<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" style="zoom:15%;" />
 
 <h1 align="center">
   muKG
