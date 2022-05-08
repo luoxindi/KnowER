@@ -1,4 +1,4 @@
-<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" width="375 "style="zoom:15%;" />
+<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" width="375" style="zoom:15%;" />
 
 <h1 align="center">
   μKG
