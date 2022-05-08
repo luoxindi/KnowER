@@ -10,7 +10,7 @@ muKG:  muKG is an open-source Python library for representation learning over kn
 
 ## Table of contents
 
-1. [Introduction of muKG 📃](#Introduction of muKG)
+1. [Introduction of muKG 📃](#introduction-of-mukg)
    1. [Overview](#overview)
    2. [Package Description](#package-description)
 2. [Getting Started 🚀](#getting-started)
@@ -92,7 +92,7 @@ muKG supports PyTorch and TensorFlow 2 deep learning libraries, users can choose
 
 ### Installation 🔧
 
-We suggest you create a new conda environment firstly.  We provide two installation instructions for tensorflow-gpu (tested on 1.2.1) and pytorch (tested on 1.10.2). Note that there is a difference between the Ray 1.10.0 and Ray 1.12.0 in batch generation module. The Ray 1.12.0 is used as an example.
+We suggest you create a new conda environment firstly.  We provide two installation instructions for tensorflow-gpu (tested on 2.3.0) and pytorch (tested on 1.10.2). Note that there is a difference between the Ray 1.10.0 and Ray 1.12.0 in batch generation. The Ray 1.12.0 is used as an example.
 
 ```bash
 # command for Tensorflow
@@ -147,9 +147,10 @@ model.run()
 model.test()
 ```
 
-To run a model on a dataset with the following command line. We show an example of training TransE on FB15K here. 
+To run a model on a dataset with the following command line. We show an example of training TransE on FB15K here. The hyperparameters will default to the corresponding json file in the `args_kge` folder.
 
 ```bash
+# -t:lp, ea, et -m: selected model name -o train and valid -d selected dataset
 python main_args.py -t lp -m transe -o train -d data/FB15K
 ```
 
