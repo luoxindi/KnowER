@@ -1,4 +1,6 @@
+<div align=center>
 <img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" width="375" style="zoom:15%;" />
+</div>
 
 <h1 align="center">
   μKG
@@ -279,7 +281,7 @@ python main_args.py -t lp -m transe -o train -d data/FB15K -r gpu:2 -w 2
 
 We give the evaluation results of the efficiency of the proposed library μKG here. The experiments were conducted on a server with an Intel Xeon Gold 6240 2.6GHz CPU, 512GB of memory and four NVIDIA Tesla V100 GPUs. The following figure compares the training time of RotatE and ConvE on FB15K-237 when using different numbers of GPUs. 
 
-<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/time.png" alt="image-20220508150812794" style="zoom: 50%;" />
+<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/time.png" width="500" alt="image-20220508150812794" style="zoom: 50%;" />
 
 ## License
 
