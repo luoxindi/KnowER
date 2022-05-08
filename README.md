@@ -266,7 +266,7 @@ The subgraph sampler is to support GNN-based embedding models like GCN-Align and
 
 We use [Ray](https://www.ray.io/) to provide a uniform and easy-to-use interface for multi-GPU and multi-processing computation. The following figure shows our Ray-based implementation for parallel computing and the code snippet to use it. Users can set the number of CPUs or GPUs used for model training.
 
-![image-20220507172436866](C:\Users\xdluo\Desktop\Knowsys\resources\image-20220507172436866.png)
+![image-20220507172436866](https://github.com/luoxindi/KnowER/blob/kkk/resources/image-20220507172436866.png)
 
 To use the following command line to train your model with multi-GPU and multi-processing. Firstly check the number of resources on your machine (GPU or CPU), and then specify the number of parallels. The system will automatically allocate resources for each worker working in parallel. 
 

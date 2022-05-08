@@ -99,7 +99,7 @@ class RotatE(BasicModel):
         h = self.ent_embeddings(batch_h)
         t = self.ent_embeddings(batch_t)
         r = self.rel_embeddings(batch_r)
-        score = self.margin - self._calc(h, t, r)
+        score = self._calc(h, t, r) - self.margin
         return score
 
     def get_embeddings(self, h_idx, r_idx, t_idx, mode='entities'):

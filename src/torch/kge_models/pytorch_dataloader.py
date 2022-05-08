@@ -191,6 +191,7 @@ def parse_triples_list(relation_set):
         subjects.append(s)
     return objects, predicates, subjects
 
+"""
 class PyTorchTrainKE(Dataset):
 
     def __init__(self, args, kgs):
@@ -363,3 +364,4 @@ class PyTorchTrainKE(Dataset):
             neg_list.append(neg_tmp)
             neg_cur_size += len(neg_tmp)
         return np.concatenate(neg_list)[:neg_size]
+"""

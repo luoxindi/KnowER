@@ -2,7 +2,7 @@ import math
 import time
 import os
 import tqdm
-from src.torch.kge_models.pytorch_dataloader import PyTorchTrainDataset, PyTorchTrainKE
+from src.torch.kge_models.pytorch_dataloader import PyTorchTrainDataset
 from joblib._multiprocessing_helpers import mp
 from torch.autograd import Variable
 import torch
@@ -55,7 +55,7 @@ class kge_trainer:
         self.model.to(self.device)
         self.valid = LinkPredictionEvaluator(model, args, kgs, is_valid=True)
         self.optimizer = get_optimizer_torch(self.args.optimizer, self.model, self.args.learning_rate)
-        train_dataset = PyTorchTrainKE(self.args, self.kgs)
+        train_dataset = PyTorchTrainDataset(self.kgs.relation_triples_list, self.args.neg_triple_num, kgs)
         self.data_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, collate_fn=train_dataset.collate_fn,
                                  shuffle=True, pin_memory=True, num_workers=self.args.batch_threads_num, drop_last=True)
     
