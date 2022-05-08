@@ -210,23 +210,21 @@ python main_args.py -t lp -m transe -o train -d data/FB15K
 μKG has bulit in 16 KG datasets for different downstream tasks. Here we list the number of entities, relations, train triples, valid triples and test triples for these datasets. You can prepare your own datasets in the Datasets hub. Firstly, you should create a subfolder `dataset name` in the `data` folder, then put your train.txt, valid.txt and test.txt files in this folder. The data should be in the triple format.
 
 ### KGE datasets
-
 | Datasets Name | Entities | Relations | Train   | Valid | Test    | Citation                                                     |
 | ------------- | -------- | --------- | ------- | ----- | ------- | ------------------------------------------------------------ |
 | FB15K         | 14951    | 1345      | 483142  | 50000 | 59071   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
 | FB15K237      | 14541    | 237       | 272115  | 17535 | 20466   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
 | WN18RR        | 40943    | 11        | 86835   | 3034  | 3134    | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/) |
-| WN18          | 40943    | 18        | 141442  | 5000  | 5000    | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)     |
-| WN11          | 38588    | 11        | 112581  | 2609  | 10544   |                                                              |
+| WN18          | 40943    | 18        | 141442  | 5000  | 5000    | [Bordes *et al*., 2013](https://arxiv.org/abs/1301.3485)     |
+| WN11          | 38588    | 11        | 112581  | 2609  | 10544   | [Socher *et al*., 2013](https://dl.acm.org/doi/10.5555/2999611.2999715) |
 | DBpedia50     | 49900    | 654       | 23288   | 399   | 10969   | [Shi *et al*., 2017](https://arxiv.org/abs/1711.03438)       |
 | DBpedia500    | 517475   | 654       | 3102677 | 10000 | 1155937 |                                                              |
 | Countries     | 271      | 2         | 1111    | 24    | 24      | [Bouchard *et al*., 2015](https://www.aaai.org/ocs/index.php/SSS/SSS15/paper/view/10257/10026) |
-| FB13          | 75043    | 13        | 316232  | 5908  | 23733   |                                                              |
+| FB13          | 75043    | 13        | 316232  | 5908  | 23733   | [Socher *et al*., 2013](https://dl.acm.org/doi/10.5555/2999611.2999715) |
 | Kinsip        | 104      | 25        | 8544    | 1086  | 1074    | [Kemp *et al*., 2006](https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf) |
 | Nations       | 14       | 55        | 1592    | 199   | 201     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets) |
 | NELL-995      | 75492    | 200       | 149678  | 543   | 3992    | [Nathani *et al*., 2019](https://arxiv.org/abs/1906.01195)   |
 | UMLS          | 75492    | 135       | 5216    | 652   | 661     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets) |
-
 ### EA datasets
 
 | Datasets name    | Entities | Relations | Triples | Citation                                                     |
