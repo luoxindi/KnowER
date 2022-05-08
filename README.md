@@ -30,8 +30,9 @@ muKG:  muKG is an open-source Python library for representation learning over kn
    2. [Evaluator](#evaluator)
    3. [ET datasets](#et-datasets)
    4. [Multi-GPU and multi-processing computation](#multi-gpu-and-multi-processing-computation)
-6. [License](#license)
-7. [Citation](#citation)
+6. [Experiments on Efficiency 🔬](#experiments-on-efficiency)
+7. [License](#license)
+8. [Citation](#citation)
 
 ## Introduction of muKG 📃
 
@@ -274,6 +275,11 @@ To use the following command line to train your model with multi-GPU and multi-p
 # When you run on one or more GPUs, use os.environ['CUDA_VISIBLE_DEVICES'] to set GPU id list first 
 python main_args.py -t lp -m transe -o train -d data/FB15K -r gpu:2 -w 2  
 ```
+## Experiments on Efficiency 🔬
+
+We give the evaluation results of the efficiency of the proposed library μKG here. The experiments were conducted on a server with an Intel Xeon Gold 6240 2.6GHz CPU, 512GB of memory and four NVIDIA Tesla V100 GPUs. The following figure compares the training time of RotatE and ConvE on FB15K-237 when using different numbers of GPUs. 
+
+<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/time.png" alt="image-20220508150812794" style="zoom: 50%;" />
 
 ## License
 
