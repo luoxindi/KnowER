@@ -2,12 +2,8 @@
 <img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" width="375" style="zoom:15%;" />
 </div>
 
-<h1 align="center">
-  μKG
-</h1>
 
-μKG:  μKG is an open-source Python library for representation learning over knowledge graphs. μKG supports joint representation learning over multi-source knowledge graphs (and also a single knowledge graph), multiple deep learning libraries (PyTorch and TF2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction), and multiple parallel computing modes (multi-process and multi-GPU computing).
-
+> **μKG** is an open-source Python library for representation learning over knowledge graphs. μKG supports joint representation learning over multi-source knowledge graphs (and also a single knowledge graph), multiple deep learning libraries (PyTorch and TF2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction), and multiple parallel computing modes (multi-process and multi-GPU computing).
 
 
 ## Table of contents
@@ -40,22 +36,20 @@
 
 ### Overview 
 
-We use  [Python](https://www.python.org/) ,  [Tensorflow](https://www.tensorflow.org/) and [PyTorch](https://pytorch.org/) to develop the basic framework of **KnowER**.  And using [RAY](https://www.ray.io/) for distributed training. The software architecture is illustrated in the following Figure. 
+We use  [Python](https://www.python.org/) ,  [Tensorflow](https://www.tensorflow.org/) and [PyTorch](https://pytorch.org/) to develop the basic framework of **μKG**.  And using [RAY](https://www.ray.io/) for distributed training. The software architecture is illustrated in the following Figure. 
 
 ![image-20220507103409697](https://github.com/luoxindi/KnowER/blob/kkk/resources/system.png)
 
 
+Compared with other existing KG systems, μKG has the following competitive features.
 
-Compared with other existing KG systems, KnowER has the following competitive features.
+👍**Comprehensive.** μKG is a full-featured Python library for representation learning over a single KG or multi-source KGs. It is compatible with the two widely-used deep learning libraries [PyTorch](https://pytorch.org/) and [TensorFlow 2](https://www.tensorflow.org/), and can therefore be easily integrated into downstream applications. It integrates a variety of KG embedding models and supports four KG tasks including link prediction, entity alignment, entity typing, and multi-source link prediction.
 
-👍**Comprehensive.** KnowER is a full-featured Python library for representation learning over a single KG or multi-source KGs. 
-  It is compatible with the two widely-used deep learning libraries [PyTorch](https://pytorch.org/) and [TensorFlow 2](https://www.tensorflow.org/), and can therefore be easily integrated into downstream applications. It integrates a variety of KG embedding models and supports four KG tasks including link prediction, entity alignment, entity typing, and multi-source link prediction.
+⚡**Fast and scalable.** μKG provides advanced implementations of KG embedding techniques with the support of multi-process and multi-GPU parallel computing, making it fast and scalable to large KGs.
 
-⚡**Fast and scalable.** KnowER provides advanced implementations of KG embedding techniques with the support of multi-process and multi-GPU parallel computing, making it fast and scalable to large KGs.
+🤳**Easy-to-use.** μKG provides simplified pipelines of KG embedding tasks for easy use. Users can interact with μKG with both method APIs and the command line. It also has high-quality documentation.
 
-🤳**Easy-to-use.** KnowER provides simplified pipelines of KG embedding tasks for easy use. Users can interact with KnowER with both method APIs and the command line. It also has high-quality documentation.
-
-😀**Continuously updated.** Our team will keep up-to-date on new related techniques and integrate new (multi-source) KG embedding models, tasks, and datasets into KnowER. We will also keep improving existing implementations.
+😀**Continuously updated.** Our team will keep up-to-date on new related techniques and integrate new (multi-source) KG embedding models, tasks, and datasets into μKG. We will also keep improving existing implementations.
 
   
 
@@ -64,7 +58,7 @@ Compared with other existing KG systems, KnowER has the following competitive fe
 ```
 μKG/
 ├── src/
-│   ├── py/: a Python-based toolkit used for the upper layer of KnowER
+│   ├── py/: a Python-based toolkit used for the upper layer of μKG
 		|── data/: a collection of datasets used for knowledge graph reasoning
 		|── args/: json files used for configuring hyperparameters of training process
 		|── evaluation/: package of the implementations for supported downstream tasks
@@ -93,14 +87,15 @@ Compared with other existing KG systems, KnowER has the following competitive fe
 * Gensim
 * Tqdm
 
+
 ### Installation 🔧
 
 We suggest you create a new conda environment firstly.  We provide two installation instructions for tensorflow-gpu (tested on 2.3.0) and pytorch (tested on 1.10.2). Note that there is a difference between the Ray 1.10.0 and Ray 1.12.0 in batch generation. The Ray 1.12.0 is used as an example.
 
 ```bash
 # command for Tensorflow
-conda create -n knower python=3.8
-conda activate knower
+conda create -n muKG python=3.8
+conda activate muKG
 conda install tensorflow-gpu==2.3.0
 conda install -c conda-forge python-igraph
 pip install -U ray==1.12.0
@@ -110,8 +105,8 @@ To install PyTorch, you must install [Anaconda](https://www.anaconda.com/) and f
 
 ```bash
 # command for PyTorch
-conda create -n knower python=3.8
-conda activate knower
+conda create -n muKG python=3.8
+conda activate muKG
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 conda install -c conda-forge python-igraph
 pip install -U ray==1.12.0
@@ -120,8 +115,8 @@ pip install -U ray==1.12.0
 The latest code can be installed by the following instructions:
 
 ```bash
-git clone https://github.com/luoxindi/KnowER.git KnowER
-cd KnowER
+git clone https://github.com/nju-websoft/muKG.git muKG
+cd muKG
 pip install -e .
 ```
 
@@ -279,7 +274,9 @@ python main_args.py -t lp -m transe -o train -d data/FB15K -r gpu:2 -w 2
 
 We give the evaluation results of the efficiency of the proposed library μKG here. The experiments were conducted on a server with an Intel Xeon Gold 6240 2.6GHz CPU, 512GB of memory and four NVIDIA Tesla V100 GPUs. The following figure compares the training time of RotatE and ConvE on FB15K-237 when using different numbers of GPUs. 
 
+<div align=center>
 <img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/time.png" width="500" alt="image-20220508150812794" style="zoom: 50%;" />
+</div>
 
 ## License
 
@@ -287,7 +284,16 @@ This project is licensed under the GPL License - see the [LICENSE](LICENSE) file
 
 ## Citation
 
-
+```
+@inproceedings{muKG,
+  author    = {Xindi Luo and
+  	       Zequn Sun and
+               Wei Hu},
+  title     = {μKG: A Library for Multi-source Knowledge Graph Embeddings and Applications},
+  booktitle = {Under review of ISWC 2022},
+  year      = {2022}
+}
+```
 
 
 
