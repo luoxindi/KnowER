@@ -1,16 +1,16 @@
-<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" style="zoom:15%;" />
+<img src="https://github.com/luoxindi/KnowER/blob/kkk/resources/logo.png" width="375 "style="zoom:15%;" />
 
 <h1 align="center">
-  muKG
+  μKG
 </h1>
 
-muKG:  muKG is an open-source Python library for representation learning over knowledge graphs. muKG supports joint representation learning over multi-source knowledge graphs (and also a single knowledge graph), multiple deep learning libraries (PyTorch and TF2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction), and multiple parallel computing modes (multi-process and multi-GPU computing).
+μKG:  μKG is an open-source Python library for representation learning over knowledge graphs. μKG supports joint representation learning over multi-source knowledge graphs (and also a single knowledge graph), multiple deep learning libraries (PyTorch and TF2), multiple embedding tasks (link prediction, entity alignment, entity typing, and multi-source link prediction), and multiple parallel computing modes (multi-process and multi-GPU computing).
 
 
 
 ## Table of contents
 
-1. [Introduction of muKG 📃](#introduction-of-mukg)
+1. [Introduction of μKG 📃](#introduction-of-mukg)
    1. [Overview](#overview)
    2. [Package Description](#package-description)
 2. [Getting Started 🚀](#getting-started)
@@ -34,7 +34,7 @@ muKG:  muKG is an open-source Python library for representation learning over kn
 7. [License](#license)
 8. [Citation](#citation)
 
-## Introduction of muKG 📃
+## Introduction of μKG 📃
 
 ### Overview 
 
@@ -60,7 +60,7 @@ Compared with other existing KG systems, KnowER has the following competitive fe
 ### 	Package Description
 
 ```
-muKG/
+μKG/
 ├── src/
 │   ├── py/: a Python-based toolkit used for the upper layer of KnowER
 		|── data/: a collection of datasets used for knowledge graph reasoning
@@ -79,7 +79,7 @@ muKG/
 
 ### Dependencies![python3](https://img.shields.io/badge/Python3-green.svg?style=flat-square)
 
-muKG supports PyTorch and TensorFlow 2 deep learning libraries, users can choose one of the following two dependencies according to their preferences.
+μKG supports PyTorch and TensorFlow 2 deep learning libraries, users can choose one of the following two dependencies according to their preferences.
 
 * Torch 1.10.2  |  Tensorflow 2.x 
 * Ray 1.12.0    
@@ -125,7 +125,7 @@ pip install -e .
 
 ### Usage 📝
 
-Currently, there are two ways to do your job. Here we provide tutorials of using command line as well as editing file to configure your model. The following is an example about how to use muKG in Python. You can choose different tasks, select the specific model and change the mode (training or evaluation) here. The hyperparameter files are stored in the  subfolder `args`. It maintains compelete details for training process.
+Currently, there are two ways to do your job. Here we provide tutorials of using command line as well as editing file to configure your model. The following is an example about how to use μKG in Python. You can choose different tasks, select the specific model and change the mode (training or evaluation) here. The hyperparameter files are stored in the  subfolder `args`. It maintains compelete details for training process.
 
 ```python
 model_name = 'model name'
@@ -160,7 +160,7 @@ python main_args.py -t lp -m transe -o train -d data/FB15K
 
 ## Models hub 🏠
 
-muKG has implemented 26 KG models. The citation for each models corresponds to either the paper describing the model. According to different knowledge graph downstream tasks, we divided the models into three categories. It is available for you to add your own models under one of the three folders.
+μKG has implemented 26 KG models. The citation for each models corresponds to either the paper describing the model. According to different knowledge graph downstream tasks, we divided the models into three categories. It is available for you to add your own models under one of the three folders.
 
 ### KGE models
 
@@ -205,7 +205,7 @@ muKG has implemented 26 KG models. The citation for each models corresponds to e
 
 ## Datasets hub 🏠
 
-muKG has bulit in 16 KG datasets for different downstream tasks. Here we list the number of entities, relations, train triples, valid triples and test triples for these datasets. You can prepare your own datasets in the Datasets hub. Firstly, you should create a subfolder `dataset name` in the `data` folder, then put your train.txt, valid.txt and test.txt files in this folder. The data should be in the triple format.
+μKG has bulit in 16 KG datasets for different downstream tasks. Here we list the number of entities, relations, train triples, valid triples and test triples for these datasets. You can prepare your own datasets in the Datasets hub. Firstly, you should create a subfolder `dataset name` in the `data` folder, then put your train.txt, valid.txt and test.txt files in this folder. The data should be in the triple format.
 
 ### KGE datasets
 
@@ -246,7 +246,7 @@ muKG has bulit in 16 KG datasets for different downstream tasks. Here we list th
 
 **Negative sampler:**
 
-muKG includes several negative sampling methods to randomly generate negative examples.
+μKG includes several negative sampling methods to randomly generate negative examples.
 
 - Uniform negative sampling:  This method replaces an entity in a triple or an alignment pair with another randomly-sampled entity to generate a negative example. It gives each entity the same replacement probability.
 - Self-adversarial negative sampling: This method samples negative triples according to the current embedding model.
