@@ -16,7 +16,9 @@ class TransE(BasicModel):
 		# self.epsilon = epsilon
 		self.norm_flag = norm_flag
 		self.p_norm = 1
-
+		self.margin_flag = False
+		if self.args.loss == 'logistic_adv':
+			self.margin_flag = True
 		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
 		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
 
@@ -24,7 +26,6 @@ class TransE(BasicModel):
 		#nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
 		self.margin = nn.Parameter(torch.Tensor([margin]))
 		self.margin.requires_grad = False
-		self.margin_flag = False
 		self.epsilon = 2.0
 		self.margin = nn.Parameter(
 			torch.Tensor([self.args.margin]),
@@ -71,5 +72,8 @@ class TransE(BasicModel):
 		h = self.ent_embeddings(batch_h)
 		t = self.ent_embeddings(batch_t)
 		r = self.rel_embeddings(batch_r)
-		score = self.calc(h, r, t).flatten()
+		if self.margin_flag:
+			score = self.calc(h, r, t).flatten() - self.margin
+		else:
+			score = self.calc(h, r, t).flatten()
 		return score

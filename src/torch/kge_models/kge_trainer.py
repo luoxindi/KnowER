@@ -163,6 +163,7 @@ class kge_trainer:
                 t1 = time.time()
                 flag = self.valid.print_results()
                 print('valid cost time: {:.4f}s'.format(time.time() - start))
+                # TODO: Add early stop for KGE here.
                 '''self.flag1, self.flag2, self.early_stop = early_stop(self.flag1, self.flag2, flag)
                 if self.early_stop or i == self.args.max_epoch:
                     break'''
@@ -226,11 +227,9 @@ def trainer(config: Dict):
 
     train_dataset = PyTorchTrainDataset(kgs.relation_triples_list, args.neg_triple_num, kgs)
     worker_batch_size = args.batch_size * 4 // train.world_size()
-    data_loader = DataLoader(train_dataset, batch_size=worker_batch_size, collate_fn=train_dataset.collate_fn, shuffle=True, pin_memory=True, num_workers=10)
-    '''data_loader1 = LoadDataset(kgs.kg1, kg1_size, args.batch_threads_num,
-                                args.neg_triple_num)
-    data_loader2 = LoadDataset(kgs.kg2, kg2_size, args.batch_threads_num,
-                               args.neg_triple_num)'''
+    data_loader = DataLoader(train_dataset, batch_size=worker_batch_size,
+                             collate_fn=train_dataset.collate_fn, shuffle=True,
+                             pin_memory=True, num_workers=10)
     data_loader = train.torch.prepare_data_loader(data_loader)
     t = time.time()
     for i in range(1, args.max_epoch + 1):
@@ -257,13 +256,6 @@ def trainer(config: Dict):
                 res += score.item()
                 continue
             batch_size = int(data0.shape[0] / (args.neg_triple_num + 1))
-            #print(len(data[0]))
-            #length += batch_size
-            # batch_pos = np.array(batch_pos)
-            # batch_neg = np.array(batch_neg)
-            # data[3] = to_tensor(data[3], device)
-            #print("length is {}".format(batch_size))
-            #print("time is {}".format(time.time() - ts))
             po_score = get_pos_score(score, batch_size)
             ne_score = get_neg_score(score, batch_size)
             loss = get_loss_func_torch(po_score, ne_score, args)
@@ -299,32 +291,6 @@ class parallel_trainer(parallel_model):
             ray.init(num_gpus=self.args.device_number)
         else:
             ray.init(num_cpus=self.args.device_number)
-        """
-        RemoteNetwork = ray.remote(mtranse_trainer)
-        self.NetworkActor = [RemoteNetwork.remote() for i in range(self.args.parallel_num)]
-        ray.get([Actor.init.remote(self.args, self.kgs) for Actor in self.NetworkActor])
-        self.split_dataset()
-        for i in range(1, self.args.max_epoch + 1):
-            ray.get([Actor.train.remote(i) for Actor in self.NetworkActor])
-            weights = ray.get([Actor.get_weights.remote() for Actor in self.NetworkActor])
-
-            '''averaged_weights = OrderedDict(
-                [(k, (weights[0][k] + weights[1][k] + weights[2][k]) / 3) for k in weights[0]])'''
-            averaged_weights = OrderedDict(
-                [(k, self.average_weight(weights, k)) for k in weights[0]])
-
-            weight_id = ray.put(averaged_weights)
-            [
-                actor.set_weights.remote(weight_id)
-                for actor in self.NetworkActor
-            ]
-            if i >= self.args.start_valid and i % self.args.eval_freq == 0:
-                flag = ray.get([Actor.valid.remote() for Actor in self.NetworkActor])
-                self.flag1, self.flag2, self.early_stop = early_stop(self.flag1, self.flag2, flag[0])
-                if self.early_stop or i == self.args.max_epoch:
-                    break
-        print("Training ends. Total time = {:.3f} s.".format(time.time() - t))
-        """
         self.train_fashion_mnist()
 
     def train_fashion_mnist(self):
@@ -339,8 +305,6 @@ class parallel_trainer(parallel_model):
         trainer1.run(
             train_func=trainer,
             config={"args": self.args, "kgs": self.kgs, "model": self.model},
-            #config={"args": self.args, "kgs": self.kgs},
-            # callbacks=[],
         )
         trainer1.shutdown()
 
